@@ -51,7 +51,9 @@ function Node({
     if (halo.current) {
       const m = halo.current.material as THREE.MeshBasicMaterial;
       m.opacity = vis * 0.16 * (open ? 2.2 : 1);
-      halo.current.scale.setScalar(2.4 + Math.sin(t * 0.9 + thought.pos[2]) * 0.3 + (open ? 1.2 : 0));
+      halo.current.scale.setScalar(
+        2.4 + Math.sin(t * 0.9 + thought.pos[2]) * 0.3 + (open ? 1.2 : 0),
+      );
       halo.current.lookAt(0, thought.pos[1], thought.pos[2] + 40);
     }
   });
@@ -92,7 +94,13 @@ function Node({
         occlude={false}
         zIndexRange={[20, 0]}
       >
-        <div ref={card} style={{ opacity: 0, transition: "opacity 380ms ease, transform 520ms cubic-bezier(.16,1,.3,1)" }}>
+        <div
+          ref={card}
+          style={{
+            opacity: 0,
+            transition: "opacity 380ms ease, transform 520ms cubic-bezier(.16,1,.3,1)",
+          }}
+        >
           <button
             type="button"
             onClick={() => {

@@ -61,6 +61,7 @@ function sample(p: number) {
 function CameraRig() {
   const { camera, scene } = useThree();
   const target = useRef(new THREE.Vector3(0, 8, -50));
+  const placed = useRef(false);
 
   useFrame((_, dt) => {
     const p = cityState.progress;
@@ -69,6 +70,12 @@ function CameraRig() {
     // pointer parallax, gentle so the fly-through stays cinematic
     k.pos.x += cityState.px * 2.4;
     k.pos.y += cityState.py * 1.6;
+    // first frame lands exactly where the story is, rather than swooping in from the default
+    if (!placed.current) {
+      placed.current = true;
+      camera.position.copy(k.pos);
+      target.current.copy(k.look);
+    }
     camera.position.lerp(k.pos, Math.min(1, dt * 2.6 * drift));
     target.current.lerp(k.look, Math.min(1, dt * 2.6));
     camera.lookAt(target.current);
@@ -117,9 +124,7 @@ function City() {
           const roll = rnd();
           const isLit = roll > 0.2;
           lit.push(isLit);
-          colors.push(
-            !isLit ? DARK : roll > 0.86 ? CYAN : roll > 0.62 ? DIM : WARM,
-          );
+          colors.push(!isLit ? DARK : roll > 0.86 ? CYAN : roll > 0.62 ? DIM : WARM);
         }
       }
     });
@@ -240,7 +245,11 @@ function City() {
             {Array.from({ length: Math.max(2, Math.floor(b.h / 9)) }).map((_, k) => (
               <mesh
                 key={`band${k}`}
-                position={[inward * (b.d / 2 + 0.06), podium + ((k + 1) * shaft) / (Math.floor(b.h / 9) + 1), 0]}
+                position={[
+                  inward * (b.d / 2 + 0.06),
+                  podium + ((k + 1) * shaft) / (Math.floor(b.h / 9) + 1),
+                  0,
+                ]}
               >
                 <boxGeometry args={[0.12, 0.3, b.w * 0.98]} />
                 <meshStandardMaterial color="#0b0f18" roughness={0.85} />
@@ -250,11 +259,7 @@ function City() {
             {Array.from({ length: b.balconies }).map((_, k) => (
               <group
                 key={k}
-                position={[
-                  inward * (b.d / 2 + 0.42),
-                  4 + ((k + 1) * b.h) / (b.balconies + 1),
-                  0,
-                ]}
+                position={[inward * (b.d / 2 + 0.42), 4 + ((k + 1) * b.h) / (b.balconies + 1), 0]}
               >
                 <mesh>
                   <boxGeometry args={[0.85, 0.14, b.w * 0.72]} />
@@ -285,10 +290,13 @@ function City() {
         );
       })}
 
-
       <instancedMesh
         ref={windows}
-        args={[undefined as unknown as THREE.BufferGeometry, undefined as unknown as THREE.Material, win.mats.length]}
+        args={[
+          undefined as unknown as THREE.BufferGeometry,
+          undefined as unknown as THREE.Material,
+          win.mats.length,
+        ]}
       >
         <planeGeometry args={[1, 1]} />
         <meshBasicMaterial toneMapped={false} side={THREE.DoubleSide} />
@@ -320,7 +328,7 @@ function Dust({ count = 1500 }: { count?: number }) {
     const t = clock.elapsedTime;
     const attr = pts.geometry.attributes.position as THREE.BufferAttribute;
     for (let i = 0; i < count; i += 3) {
-      attr.setY(i, ((positions[i * 3 + 1] + t * 0.5 + seeds[i] * 3) % 70));
+      attr.setY(i, (positions[i * 3 + 1] + t * 0.5 + seeds[i] * 3) % 70);
     }
     attr.needsUpdate = true;
     const mat = pts.material as THREE.PointsMaterial;
@@ -381,11 +389,7 @@ function CrimsonHand() {
         />
       </mesh>
       {[0, 1, 2, 3, 4, 5].map((i) => (
-        <mesh
-          key={i}
-          rotation={[Math.PI / 2.4, 0, (i / 6) * Math.PI * 2]}
-          position={[0, 0, 0]}
-        >
+        <mesh key={i} rotation={[Math.PI / 2.4, 0, (i / 6) * Math.PI * 2]} position={[0, 0, 0]}>
           <torusGeometry args={[3.4 + i * 0.16, 0.045, 8, 90]} />
           <meshStandardMaterial
             color="#8b0000"

@@ -168,7 +168,8 @@ export function actAlpha(progress: number, id: ActId) {
   const s = (id - 1) * ACT_SPAN;
   const e = id * ACT_SPAN;
   const rise = id === 1 ? 1 : smoothstep(s - ACT_SPAN * 0.42, s + ACT_SPAN * 0.16, progress);
-  const fall = id === ACT_COUNT ? 1 : 1 - smoothstep(e - ACT_SPAN * 0.3, e + ACT_SPAN * 0.16, progress);
+  const fall =
+    id === ACT_COUNT ? 1 : 1 - smoothstep(e - ACT_SPAN * 0.3, e + ACT_SPAN * 0.16, progress);
   return rise * fall;
 }
 

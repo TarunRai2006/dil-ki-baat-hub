@@ -29,8 +29,7 @@ function heartPoint(i: number, n: number) {
   const t = (i / n) * Math.PI * 2;
   const jitter = 0.82 + Math.random() * 0.18;
   const x = (16 * Math.pow(Math.sin(t), 3)) / 16;
-  const y =
-    (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) / 16;
+  const y = (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) / 16;
   const r = Math.pow(Math.random(), 0.6);
   const depth = (Math.random() - 0.5) * 0.9 * (1 - r * 0.4);
   return new THREE.Vector3(x * 1.75 * jitter * r, y * 1.75 * jitter * r + 0.15, depth);
@@ -87,7 +86,10 @@ function Thoughts({ count = 2600 }: { count?: number }) {
     // a double thump while the heart is whole
     const beatPhase = Math.max(0, Math.sin(time * 1.25));
     const beat =
-      1 + form * (Math.pow(beatPhase, 14) * 0.06 + Math.pow(Math.max(0, Math.sin(time * 1.25 - 0.5)), 16) * 0.035);
+      1 +
+      form *
+        (Math.pow(beatPhase, 14) * 0.06 +
+          Math.pow(Math.max(0, Math.sin(time * 1.25 - 0.5)), 16) * 0.035);
 
     const pos = points.current.geometry.attributes.position as THREE.BufferAttribute;
     const arr = pos.array as Float32Array;

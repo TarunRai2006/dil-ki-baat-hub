@@ -21,7 +21,6 @@ export function Rise({
   const Tag = as as ElementType<{ ref?: unknown; className?: string; children?: ReactNode }>;
   const ref = useRef<HTMLDivElement>(null);
 
-
   useGSAP(
     () => {
       const el = ref.current;

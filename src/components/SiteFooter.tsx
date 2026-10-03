@@ -61,7 +61,9 @@ export function SiteFooter() {
           </div>
 
           <div>
-            <p className="text-[0.62rem] uppercase tracking-[0.32em] text-ember/80">The fine print</p>
+            <p className="text-[0.62rem] uppercase tracking-[0.32em] text-ember/80">
+              The fine print
+            </p>
             <ul className="mt-5 space-y-3 text-sm text-muted-foreground">
               <li>
                 <Link

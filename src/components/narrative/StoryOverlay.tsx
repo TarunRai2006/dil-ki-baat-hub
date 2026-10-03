@@ -4,10 +4,11 @@ import { gsap } from "@/lib/gsap";
 import { scrollControls, scrollState } from "@/lib/scroll-state";
 import { ACTS, ACT_SPAN, actLocal, smoothstep, type ActId } from "@/lib/narrative";
 import { ConfessionWizard } from "@/components/ConfessionWizard";
+import type { StoredRoom } from "@/lib/confession";
 import { Magnetic } from "@/components/Magnetic";
 import { Button } from "@/components/ui/button";
 
-type Room = { roomId: string; alias: string; ttl: string };
+type Room = StoredRoom;
 
 /** One voiceover line per act, floating under the vector illustration. */
 export const VOICEOVER: Record<number, string> = {

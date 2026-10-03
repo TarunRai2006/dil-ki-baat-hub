@@ -122,11 +122,8 @@
   --sidebar-ring: oklch(0.766 0.126 87 / 45%);
 
   /* ambient lighting: radial pools of #3B0D0B warmth over obsidian */
-  --gradient-dusk: radial-gradient(
-      100% 70% at 78% 2%,
-      oklch(0.25 0.068 30 / 92%) 0%,
-      transparent 60%
-    ),
+  --gradient-dusk:
+    radial-gradient(100% 70% at 78% 2%, oklch(0.25 0.068 30 / 92%) 0%, transparent 60%),
     radial-gradient(90% 60% at 4% 18%, oklch(0.25 0.068 30 / 78%) 0%, transparent 62%),
     radial-gradient(120% 80% at 50% 104%, oklch(0.23 0.062 26 / 85%) 0%, transparent 66%),
     linear-gradient(180deg, oklch(0.148 0.033 28) 0%, oklch(0.128 0.028 24) 100%);
@@ -215,8 +212,7 @@
 @utility glass-card {
   position: relative;
   background:
-    linear-gradient(160deg, oklch(1 0 0 / 5%) 0%, transparent 42%),
-    oklch(0.1 0.018 26 / 55%);
+    linear-gradient(160deg, oklch(1 0 0 / 5%) 0%, transparent 42%), oklch(0.1 0.018 26 / 55%);
   backdrop-filter: blur(16px) saturate(140%);
   border: 1px solid oklch(0.766 0.126 87 / 12%);
   box-shadow:
@@ -295,11 +291,8 @@
 /* Warm paper sheet */
 @utility paper {
   background-color: var(--cream);
-  background-image: radial-gradient(
-      90% 60% at 0% 0%,
-      oklch(0.755 0.072 22 / 14%) 0%,
-      transparent 60%
-    ),
+  background-image:
+    radial-gradient(90% 60% at 0% 0%, oklch(0.755 0.072 22 / 14%) 0%, transparent 60%),
     radial-gradient(80% 70% at 100% 100%, oklch(0.766 0.126 87 / 18%) 0%, transparent 60%);
   color: var(--ink);
   box-shadow: var(--shadow-warm), var(--shadow-lamp);
@@ -344,7 +337,6 @@
     transform: translateX(-50%);
   }
 }
-
 
 @keyframes float-slow {
   0%,
@@ -571,7 +563,6 @@
   }
 }
 
-
 /* ---------------------------------------------------------------- day gate */
 
 /* Dust motes drifting through the opening sunlight */
@@ -604,5 +595,149 @@
   }
   to {
     transform: translate3d(0, -10px, 0);
+  }
+}
+
+/* ---------------------------------------------------------------- intro film
+ * Source: 1280x720 (16:9). Its first ~4.9s carry baked-in letterbox bars
+ * (70px top and bottom, a 2.2:1 picture) that vanish on a single frame.
+ *
+ * The frame box always keeps the film's own 16:9 ratio (never stretched) and
+ * is sized from the viewport in pure CSS, so rotation simply re-flows it:
+ *   landscape: the full frame covers the viewport; our own bars sit flush on
+ *              the baked ones and slide away once the film opens up.
+ *   portrait:  the 2.2:1 picture covers the viewport (a deliberate crop round
+ *              the street's vanishing point), so the bars are never on screen.
+ */
+.film-stage {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100vh;
+  height: 100lvh;
+  overflow: hidden;
+  background: #000;
+  contain: strict;
+}
+
+/* the hand-off: hold the last frame, then dissolve on the compositor */
+.film-stage {
+  transition:
+    opacity var(--film-fade, 750ms) cubic-bezier(0.65, 0, 0.35, 1) var(--film-hold, 180ms),
+    visibility 0s linear calc(var(--film-hold, 180ms) + var(--film-fade, 750ms));
+}
+.film-stage[data-leaving] {
+  opacity: 0;
+  visibility: hidden;
+}
+.film-stage [data-chrome] {
+  transition: opacity 300ms ease-out;
+}
+.film-stage[data-leaving] [data-chrome] {
+  opacity: 0;
+}
+
+.film-frame {
+  --film-w: max(100vw, 100vh * 16 / 9);
+  --film-w: max(100vw, 100lvh * 16 / 9);
+  --film-fx: 0.5;
+  position: absolute;
+  width: var(--film-w);
+  aspect-ratio: 16 / 9;
+  left: calc(50vw - var(--film-w) * var(--film-fx));
+  top: calc(50% - var(--film-w) * 9 / 32);
+  animation: film-fade-in 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (orientation: portrait) {
+  .film-frame {
+    --film-w: max(100vw, 100vh * 1280 / 580);
+    --film-w: max(100vw, 100lvh * 1280 / 580);
+    /* the eye sits a touch left of centre over the whole film */
+    --film-fx: 0.48;
+  }
+}
+
+.film-frame > img,
+.film-frame video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.film-frame video {
+  opacity: 0;
+}
+.film-frame[data-ready] video {
+  opacity: 1;
+}
+
+.film-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  /* 70/720 of the frame, plus a hair so no baked edge can peek through */
+  height: 9.9%;
+  background: #000;
+  transition: transform 1500ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+.film-bar[data-edge="top"] {
+  top: 0;
+}
+.film-bar[data-edge="bottom"] {
+  bottom: 0;
+}
+.film-frame[data-open] .film-bar[data-edge="top"] {
+  transform: translateY(-100%);
+}
+.film-frame[data-open] .film-bar[data-edge="bottom"] {
+  transform: translateY(100%);
+}
+
+/* playback progress, driven by the compositor rather than a JS loop */
+.film-progress {
+  transform-origin: left center;
+  transform: scaleX(0);
+  animation: film-progress var(--film-duration, 20s) linear both paused;
+}
+.film-progress[data-run] {
+  animation-play-state: running;
+}
+
+/* quiet cues that only surface if waiting genuinely drags on */
+.film-cue {
+  opacity: 0;
+  visibility: hidden;
+  animation: film-cue 500ms ease-out both;
+  animation-delay: var(--cue-delay, 700ms);
+}
+
+@keyframes film-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes film-progress {
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes film-cue {
+  to {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .film-frame {
+    animation: none;
+  }
+  .film-bar {
+    transition: none;
   }
 }

@@ -156,13 +156,4 @@ export function buildCity(count = 56): Building[] {
   return out;
 }
 
-export const TICKER_LINES = [
-  "Someone in Pune just released: \"I am tired in a way sleep does not fix.\"",
-  "Someone in Delhi just released: \"I said yes when I meant no. Again.\"",
-  "Someone in Kochi just released: \"My parents want a life I never picked.\"",
-  "Someone in Jaipur just released: \"I miss a person who was not good for me.\"",
-  "Someone in Kolkata just released: \"Everyone my age seems so far ahead of me.\"",
-  "Someone in Indore just released: \"I smile all day and overthink at 2 AM.\"",
-];
-
 export const EMOTION_LABELS = ["Heavy", "Anxious", "Numb", "Lighter", "Relieved", "Hopeful"];
