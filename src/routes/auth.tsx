@@ -32,7 +32,8 @@ export const Route = createFileRoute("/auth")({
 function authMessage(err: unknown, fallback: string): string {
   const raw = err && typeof err === "object" && "message" in err ? String(err.message) : "";
   if (/invalid login credentials/i.test(raw)) return "That email and password do not match.";
-  if (/email not confirmed/i.test(raw)) return "Please confirm your email address first.";
+  if (/email not confirmed/i.test(raw))
+    return "Confirm your email first: open the link we sent you (check spam too), then sign in.";
   if (/already registered|already been registered/i.test(raw))
     return "An account with this email already exists. Try signing in.";
   if (/password/i.test(raw) && /(least|short|weak)/i.test(raw))
@@ -67,13 +68,19 @@ function AuthPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: { emailRedirectTo: `${window.location.origin}/admin` },
       });
       if (error) return toast.error(authMessage(error, "Could not create the account."));
-      toast.success("Account created. Confirm your email if asked, then sign in.");
+      // no session means the project wants the address confirmed before first sign-in
+      if (!data.session)
+        return toast.success(
+          `Check ${email} for a confirmation link (look in spam too), then sign in here. A mentor still has to grant dashboard access.`,
+          { duration: 12_000 },
+        );
+      toast.success("Account created. A mentor has to grant dashboard access before it opens.");
     } catch (err) {
       toast.error(authMessage(err, "Could not create the account."));
     } finally {
