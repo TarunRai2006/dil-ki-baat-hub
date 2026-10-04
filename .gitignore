@@ -37,3 +37,9 @@ playwright-report/
 
 # Supabase CLI link state (per machine)
 supabase/.temp/
+
+# Environment files hold per-machine / per-host values: never commit them.
+# Only the placeholder template is tracked.
+.env
+.env.*
+!.env.example
