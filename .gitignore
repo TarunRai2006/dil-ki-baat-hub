@@ -34,3 +34,6 @@ dist-ssr
 # Test artifacts
 test-results/
 playwright-report/
+
+# Supabase CLI link state (per machine)
+supabase/.temp/

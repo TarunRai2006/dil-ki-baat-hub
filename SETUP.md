@@ -5,14 +5,14 @@ matters is in `supabase/migrations/`: tables, row-level security, the
 functions the site calls, realtime, chat expiry. Any Supabase project that has
 those migrations applied works.
 
+The app is connected to the hosted project **`iytqunvpnubbttppoepe`**
+(`.env`), with all migrations applied. `npm run dev` uses it.
+
 There are two ways to run it:
 
-- **A. On your computer** with a local Supabase in Docker (for development and tests)
-- **B. On a hosted Supabase project you own** (for the real site)
-
-> Why the form said "We could not reach the server": `.env` points at the
-> Lovable-hosted project `fazyaaptvenwzdllirer.supabase.co`, and that address
-> no longer exists, so the browser can't reach any database. Use A or B below.
+- **A. Against a local Supabase in Docker** (`npm run dev:docker`): a private
+  sandbox with sample data, for development and tests
+- **B. Against the hosted project** (`npm run dev`, and the real site)
 
 ---
 
@@ -27,7 +27,8 @@ npx supabase db reset       # applies every migration + supabase/seed.sql (sampl
 npx supabase status -o env  # prints API_URL and PUBLISHABLE_KEY for the next step
 ```
 
-Create `.env.local` in the project root (it is git-ignored and overrides `.env`):
+Create `.env.docker.local` in the project root. It is git-ignored, and Vite
+loads it only in `docker` mode, where it overrides `.env`:
 
 ```sh
 VITE_SUPABASE_URL="http://127.0.0.1:54321"
@@ -42,7 +43,7 @@ Create a mentor (admin) login. The script only works against localhost:
 SUPABASE_SECRET_KEY="<SECRET_KEY from supabase status>" ADMIN_EMAIL="mentor@local.test" ADMIN_PASSWORD="<choose one>" npm run seed:admin
 ```
 
-Then `npm run dev` and open:
+Then `npm run dev:docker` and open:
 
 | URL                         | What                                              |
 | --------------------------- | ------------------------------------------------- |
@@ -51,7 +52,8 @@ Then `npm run dev` and open:
 | http://localhost:8080/admin | dashboard: submissions, **Chats**, stats          |
 | http://127.0.0.1:54323      | Supabase Studio: browse the tables directly       |
 
-Restart `npm run dev` after creating or changing `.env.local`.
+Restart the dev server after changing any env file. Never create a plain
+`.env.local`: it would override `.env` in every mode.
 
 ---
 
@@ -59,13 +61,24 @@ Restart `npm run dev` after creating or changing `.env.local`.
 
 1. Create a project at https://supabase.com/dashboard (the free tier is fine).
    Note its **project ref**, the `xxxx` in `https://xxxx.supabase.co`.
-2. Apply the schema from this repository:
+2. Apply the schema from this repository (already done for `iytqunvpnubbttppoepe`;
+   run `db push` again whenever a new migration is added):
+
    ```sh
    npx supabase login
    npx supabase link --project-ref <project-ref>
    npx supabase db push
    ```
+
    Do not run `supabase/seed.sql` here; it is sample data for local use only.
+   `npx supabase migration list --linked` shows local and remote side by side.
+
+   If `db push` says **"IPv6 is not supported on your current network"** and
+   names a different project: the CLI takes the project from
+   `SUPABASE_PROJECT_ID` in `.env` and `project_id` in `supabase/config.toml`
+   before the link. Make both the new ref; `link` then connects through the
+   IPv4 pooler.
+
 3. **Project Settings → API**: copy the Project URL and the publishable (anon)
    key into `.env`, replacing the old values:
    ```sh
