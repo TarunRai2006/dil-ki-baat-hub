@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -14,8 +14,13 @@ import { AdminChat } from "@/components/admin/AdminChat";
 import {
   DEFAULT_FILTERS,
   adminSession,
+  fetchRooms,
   fetchStats,
   fetchSubmissions,
+  isUnread,
+  loadSeen,
+  saveSeen,
+  type SeenMap,
   type SubmissionFilters as Filters,
 } from "@/lib/admin";
 
@@ -85,6 +90,15 @@ function AdminPage() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [tab, setTab] = useState("submissions");
   const [activeRoom, setActiveRoom] = useState<string | null>(null);
+  const [seen, setSeen] = useState<SeenMap>({});
+  useEffect(() => setSeen(loadSeen()), []);
+  const markSeen = useCallback((roomId: string, at: string) => {
+    setSeen((prev) => {
+      const next = { ...prev, [roomId]: at };
+      saveSeen(next);
+      return next;
+    });
+  }, []);
   const [newIds, setNewIds] = useState<Set<string>>(() => new Set());
   const [live, setLive] = useState(true);
 
@@ -98,6 +112,14 @@ function AdminPage() {
     placeholderData: keepPreviousData,
     refetchInterval,
   });
+  // same cache entry the Chats tab reads, so the badge costs no extra request there
+  const liveRooms = useQuery({
+    queryKey: ["chat-rooms", "live"],
+    enabled: isAdmin,
+    queryFn: () => fetchRooms("live"),
+    refetchInterval,
+  });
+  const unreadRooms = (liveRooms.data ?? []).filter((r) => isUnread(r, seen)).length;
   const stats = useQuery({
     queryKey: ["admin-stats"],
     enabled: isAdmin,
@@ -126,6 +148,20 @@ function AdminPage() {
         else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED")
           setLive(false);
       });
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [isAdmin, qc]);
+
+  // room list and the Chats badge follow room activity (a new message bumps last_message_at)
+  useEffect(() => {
+    if (!isAdmin) return;
+    const channel = supabase
+      .channel("admin-chat-rooms")
+      .on("postgres_changes", { event: "*", schema: "public", table: "chat_rooms" }, () => {
+        void qc.invalidateQueries({ queryKey: ["chat-rooms"] });
+      })
+      .subscribe();
     return () => {
       void supabase.removeChannel(channel);
     };
@@ -221,7 +257,19 @@ function AdminPage() {
       <Tabs value={tab} onValueChange={setTab} className="mt-8">
         <TabsList>
           <TabsTrigger value="submissions">Submissions</TabsTrigger>
-          <TabsTrigger value="chats">Chat moderation</TabsTrigger>
+          <TabsTrigger value="chats" className="gap-2">
+            Chats
+            {(liveRooms.data?.length ?? 0) > 0 && (
+              <span className="rounded-full bg-primary/20 px-1.5 text-[0.65rem] text-primary">
+                {liveRooms.data!.length} live
+              </span>
+            )}
+            {unreadRooms > 0 && (
+              <span className="rounded-full bg-primary px-1.5 text-[0.65rem] text-primary-foreground">
+                {unreadRooms} unread
+              </span>
+            )}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="submissions" className="mt-4 space-y-4">
@@ -259,7 +307,13 @@ function AdminPage() {
         </TabsContent>
 
         <TabsContent value="chats" className="mt-4">
-          <AdminChat activeRoom={activeRoom} onSelectRoom={setActiveRoom} />
+          <AdminChat
+            activeRoom={activeRoom}
+            onSelectRoom={setActiveRoom}
+            onOpenSubmission={setOpenId}
+            seen={seen}
+            onSeen={markSeen}
+          />
         </TabsContent>
       </Tabs>
 

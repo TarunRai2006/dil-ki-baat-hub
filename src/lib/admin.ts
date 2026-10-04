@@ -264,8 +264,10 @@ export type AdminRoom = {
   created_at: string;
   expires_at: string | null;
   last_message_at: string | null;
-  submissions: { alias: string; content: string } | null;
+  submissions: { alias: string; content: string; category: string } | null;
   chat_messages: { count: number }[];
+  /** the newest message only (embedded, so the list is still one request) */
+  last: { message: string; sender_type: string; created_at: string }[];
 };
 
 /** Live rooms, or rooms that expired / were closed, newest activity first. */
@@ -274,7 +276,7 @@ export async function fetchRooms(view: RoomView) {
   let q = supabase
     .from("chat_rooms")
     .select(
-      "id, status, created_at, expires_at, last_message_at, submissions(alias, content), chat_messages(count)",
+      "id, status, created_at, expires_at, last_message_at, submissions(alias, content, category), chat_messages(count), last:chat_messages(message, sender_type, created_at)",
     );
   q =
     view === "live"
@@ -282,6 +284,8 @@ export async function fetchRooms(view: RoomView) {
       : q.or(`status.neq.open,expires_at.lte.${now}`);
   const { data, error } = await q
     .order("last_message_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { referencedTable: "last", ascending: false })
+    .limit(1, { referencedTable: "last" })
     .limit(50);
   if (error) throw error;
   return (data ?? []) as unknown as AdminRoom[];
@@ -298,3 +302,34 @@ export async function setMessageHidden(id: string, hidden: boolean) {
 
 /** Set just before a deliberate sign-out, so it is not mistaken for an expired session. */
 export const adminSession = { leaving: false };
+
+/**
+ * When this mentor last read each room, kept on this device only (a reading
+ * aid, not data: losing it just shows rooms as unread again).
+ */
+const SEEN_KEY = "dkb_admin_seen";
+export type SeenMap = Record<string, string>;
+
+export function loadSeen(): SeenMap {
+  if (typeof window === "undefined") return {};
+  try {
+    const parsed: unknown = JSON.parse(window.localStorage.getItem(SEEN_KEY) || "{}");
+    return parsed && typeof parsed === "object" ? (parsed as SeenMap) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function saveSeen(seen: SeenMap) {
+  try {
+    window.localStorage.setItem(SEEN_KEY, JSON.stringify(seen));
+  } catch {
+    // storage blocked (private mode): unread markers just reset next visit
+  }
+}
+
+/** A room is unread when the visitor spoke last, after the mentor last looked. */
+export function isUnread(room: AdminRoom, seen: SeenMap) {
+  const last = room.last[0];
+  return !!last && last.sender_type === "user" && last.created_at > (seen[room.id] ?? "");
+}

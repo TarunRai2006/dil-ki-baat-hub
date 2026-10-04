@@ -17,7 +17,6 @@ import {
   submitConfession,
   type StoredRoom,
 } from "@/lib/confession";
-import { cityState } from "@/lib/city-state";
 import { scrollControls } from "@/lib/scroll-state";
 import { playClick, playRelease } from "@/lib/audio-engine";
 
@@ -38,11 +37,9 @@ function Field({
   delay: number;
 }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.7, delay: 0.25 + delay * 0.5, ease: EASE }}
-      className="border-t border-cream/10 pt-5 first:border-t-0 first:pt-0"
+    <div
+      style={{ animationDelay: `${250 + delay * 500}ms` }}
+      className="rise-in border-t border-cream/10 pt-5 first:border-t-0 first:pt-0"
     >
       <div className="flex items-baseline gap-3">
         <span className="font-mono text-[0.55rem] tracking-[0.24em] text-primary/60">{n}</span>
@@ -54,7 +51,7 @@ function Field({
         <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground sm:pl-8">{hint}</p>
       )}
       <div className="mt-3.5 pl-0 sm:pl-8">{children}</div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -143,7 +140,6 @@ export function ReleaseForm({
     setProblem(null);
     try {
       const result = await submitConfession(input, requestId.current);
-      cityState.burst += 1;
       playRelease();
       onReleased(parsed.data.content, result.room);
       setContent("");
@@ -166,13 +162,7 @@ export function ReleaseForm({
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 22 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.95, ease: EASE }}
-      ref={panelRef}
-      className="release-glass mx-auto w-full max-w-2xl p-5 sm:p-8"
-    >
+    <div ref={panelRef} className="release-glass rise-in mx-auto w-full max-w-2xl p-5 sm:p-8">
       <AnimatePresence mode="wait" initial={false}>
         {released ? (
           <motion.div
@@ -228,14 +218,9 @@ export function ReleaseForm({
               textareaRef.current?.focus({ preventScroll: true });
             }}
           >
-            <motion.p
-              initial={{ opacity: 0, letterSpacing: "0.55em" }}
-              animate={{ opacity: 1, letterSpacing: "0.36em" }}
-              transition={{ duration: 1.2, ease: EASE }}
-              className="font-mono text-[0.55rem] uppercase text-primary/75"
-            >
+            <p className="font-mono text-[0.55rem] uppercase tracking-[0.36em] text-primary/75">
               your turn · anonymous
-            </motion.p>
+            </p>
             <h2 className="mt-3 font-display text-[1.75rem] leading-tight text-cream sm:text-4xl">
               Say the thing you have been
               <span className="block italic text-gradient-gold">rehearsing in your head.</span>
@@ -389,12 +374,7 @@ export function ReleaseForm({
               </Field>
             </div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, delay: 0.66, ease: EASE }}
-              className="mt-8"
-            >
+            <div className="rise-in mt-8" style={{ animationDelay: "660ms" }}>
               <Button
                 onClick={submit}
                 disabled={loading}
@@ -415,10 +395,10 @@ export function ReleaseForm({
               <p className="mt-2 text-center font-mono text-[0.5rem] uppercase tracking-[0.22em] text-muted-foreground/70">
                 In crisis? Tele-MANAS 14416 · Vandrevala 9999 666 555
               </p>
-            </motion.div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Eye, EyeOff, Loader2, Lock, Send } from "lucide-react";
+import { Eye, EyeOff, FileText, Loader2, Lock, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +19,14 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { MESSAGE_MAX, chatMessageSchema, friendlyError } from "@/lib/confession";
-import { fetchRooms, setMessageHidden, type RoomView } from "@/lib/admin";
+import {
+  fetchRooms,
+  isUnread,
+  setMessageHidden,
+  type AdminRoom,
+  type RoomView,
+  type SeenMap,
+} from "@/lib/admin";
 
 const QUICK_REPLIES = [
   "Thank you for trusting us with this. You're safe here. 🤍",
@@ -61,13 +68,34 @@ function upsertMessage(list: Message[] | undefined, m: Message) {
 const fmt = (iso: string) =>
   new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 
+/** "14:05" today, "3 Oct" before that: enough to scan a list by. */
+const short = (iso: string) => {
+  const d = new Date(iso);
+  return d.toDateString() === new Date().toDateString()
+    ? d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
+    : d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+};
+
+function roomEnds(r: AdminRoom) {
+  if (r.status !== "open") return r.status;
+  if (!r.expires_at) return "no expiry";
+  return `${new Date(r.expires_at).getTime() > Date.now() ? "ends" : "ended"} ${fmt(r.expires_at)}`;
+}
+
 /** Mentor side of the chats: live and ended rooms, replies, hide/unhide, close. */
 export function AdminChat({
   activeRoom,
   onSelectRoom,
+  onOpenSubmission,
+  seen,
+  onSeen,
 }: {
   activeRoom: string | null;
   onSelectRoom: (id: string | null) => void;
+  /** a room belongs to exactly one confession (same id) */
+  onOpenSubmission: (id: string) => void;
+  seen: SeenMap;
+  onSeen: (roomId: string, at: string) => void;
 }) {
   const qc = useQueryClient();
   const [view, setView] = useState<RoomView>("live");
@@ -80,19 +108,6 @@ export function AdminChat({
     enabled: !!activeRoom,
     queryFn: () => fetchRoomMessages(activeRoom!),
   });
-
-  // room list follows room changes (new rooms, closes, expiry status)
-  useEffect(() => {
-    const channel = supabase
-      .channel("admin-chat-rooms")
-      .on("postgres_changes", { event: "*", schema: "public", table: "chat_rooms" }, () => {
-        void qc.invalidateQueries({ queryKey: ["chat-rooms"] });
-      })
-      .subscribe();
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [qc]);
 
   // one subscription for the open room only, swapped when the room changes
   useEffect(() => {
@@ -130,6 +145,12 @@ export function AdminChat({
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages.data?.length]);
+
+  // reading the open room marks everything in it, including what arrives while open, as seen
+  const newest = messages.data?.at(-1)?.created_at;
+  useEffect(() => {
+    if (activeRoom && newest && newest > (seen[activeRoom] ?? "")) onSeen(activeRoom, newest);
+  }, [activeRoom, newest, seen, onSeen]);
 
   const send = useMutation({
     mutationFn: async (text: string) => {
@@ -238,19 +259,27 @@ export function AdminChat({
                 }`}
               >
                 <span className="flex items-center justify-between gap-2">
-                  <span className="font-medium">{r.submissions?.alias ?? "Anonymous"}</span>
-                  <span className="text-[0.65rem] opacity-70">
-                    {r.chat_messages[0]?.count ?? 0} msgs
+                  <span className="flex min-w-0 items-center gap-2 font-medium">
+                    {isUnread(r, seen) && activeRoom !== r.id && (
+                      <span
+                        className="size-2 shrink-0 rounded-full bg-primary"
+                        aria-label="Unread"
+                        role="img"
+                      />
+                    )}
+                    <span className="truncate">{r.submissions?.alias ?? "Anonymous"}</span>
+                  </span>
+                  <span className="shrink-0 text-[0.65rem] opacity-70">
+                    {short(r.last[0]?.created_at ?? r.created_at)}
                   </span>
                 </span>
-                <span className="block truncate text-xs opacity-75">{r.submissions?.content}</span>
+                <span className="block truncate text-xs opacity-80">
+                  {r.last[0]
+                    ? `${r.last[0].sender_type === "admin" ? "You: " : ""}${r.last[0].message}`
+                    : "No messages yet"}
+                </span>
                 <span className="block text-[0.65rem] opacity-60">
-                  Opened {fmt(r.created_at)} ·{" "}
-                  {r.status !== "open"
-                    ? r.status
-                    : r.expires_at
-                      ? `${new Date(r.expires_at).getTime() > Date.now() ? "ends" : "ended"} ${fmt(r.expires_at)}`
-                      : "no expiry"}
+                  {r.chat_messages[0]?.count ?? 0} msgs · {roomEnds(r)}
                 </span>
               </button>
             ))}
@@ -263,15 +292,24 @@ export function AdminChat({
           <p className="m-auto text-sm text-muted-foreground">Select a room to read or reply.</p>
         ) : (
           <>
-            <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+            <header className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3">
               <div>
                 <p className="font-display text-lg text-primary">
                   {current?.submissions?.alias ?? "Anonymous"}
                 </p>
                 <p className="font-mono text-[0.55rem] uppercase tracking-[0.2em] text-muted-foreground">
                   {isLive ? "Live" : "Ended — read only"}
+                  {current?.submissions?.category ? ` · ${current.submissions.category}` : ""}
                 </p>
               </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="ml-auto gap-2"
+                onClick={() => onOpenSubmission(activeRoom)}
+              >
+                <FileText className="size-4" aria-hidden="true" /> View submission
+              </Button>
               {isLive && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
@@ -297,8 +335,19 @@ export function AdminChat({
                 </AlertDialog>
               )}
             </header>
+            {current?.submissions?.content && (
+              <details className="group border-b border-border px-4 py-2 text-sm">
+                <summary className="cursor-pointer list-none font-mono text-[0.55rem] uppercase tracking-[0.2em] text-muted-foreground hover:text-cream">
+                  What they wrote <span className="group-open:hidden">· show</span>
+                  <span className="hidden group-open:inline">· hide</span>
+                </summary>
+                <p className="mt-2 max-h-32 overflow-y-auto whitespace-pre-wrap break-words text-cream/85">
+                  {current.submissions.content}
+                </p>
+              </details>
+            )}
             <ScrollArea className="min-h-0 flex-1 p-4">
-              <div className="space-y-3">
+              <div role="log" aria-label="Conversation" className="space-y-3">
                 {messages.isLoading && <Skeleton className="h-10 w-1/2" />}
                 {messages.isError && (
                   <p className="text-sm text-muted-foreground">

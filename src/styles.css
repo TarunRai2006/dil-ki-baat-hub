@@ -329,6 +329,23 @@
   mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent);
 }
 
+/* entrance that starts with the server-rendered HTML, not after hydration,
+   and never leaves content invisible if scripts are slow or fail */
+.rise-in {
+  animation: rise-in 800ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rise-in {
+    animation: none;
+  }
+}
+
 @keyframes marquee {
   from {
     transform: translateX(0);
@@ -598,65 +615,32 @@
   }
 }
 
-/* ---------------------------------------------------------------- intro film
- * Source: 1280x720 (16:9). Its first ~4.9s carry baked-in letterbox bars
- * (70px top and bottom, a 2.2:1 picture) that vanish on a single frame.
- *
- * The frame box always keeps the film's own 16:9 ratio (never stretched) and
- * is sized from the viewport in pure CSS, so rotation simply re-flows it:
- *   landscape: the full frame covers the viewport; our own bars sit flush on
- *              the baked ones and slide away once the film opens up.
- *   portrait:  the 2.2:1 picture covers the viewport (a deliberate crop round
- *              the street's vanishing point), so the bars are never on screen.
+/* ----------------------------------------------------------- background film
+ * Source: 1280x720 (16:9) whose first ~4.9s carry baked-in letterbox bars
+ * (70px top and bottom, a 2.2:1 picture). As a loop those bars would flash on
+ * every restart, so the frame is always sized to cover the viewport with the
+ * 2.2:1 picture alone: the bars are never on screen, in any orientation.
+ * Pure CSS, so rotation and resizing simply re-flow it.
  */
-.film-stage {
+.film-bg {
   position: fixed;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100vh;
-  height: 100lvh;
+  inset: 0;
+  z-index: 0;
   overflow: hidden;
-  background: #000;
+  pointer-events: none;
+  background: radial-gradient(120% 85% at 50% 42%, #2a0406 0%, #12060a 48%, #07090e 100%);
   contain: strict;
 }
 
-/* the hand-off: hold the last frame, then dissolve on the compositor */
-.film-stage {
-  transition:
-    opacity var(--film-fade, 750ms) cubic-bezier(0.65, 0, 0.35, 1) var(--film-hold, 180ms),
-    visibility 0s linear calc(var(--film-hold, 180ms) + var(--film-fade, 750ms));
-}
-.film-stage[data-leaving] {
-  opacity: 0;
-  visibility: hidden;
-}
-.film-stage [data-chrome] {
-  transition: opacity 300ms ease-out;
-}
-.film-stage[data-leaving] [data-chrome] {
-  opacity: 0;
-}
-
 .film-frame {
-  --film-w: max(100vw, 100vh * 16 / 9);
-  --film-w: max(100vw, 100lvh * 16 / 9);
-  --film-fx: 0.5;
+  --film-w: max(100vw, 100vh * 1280 / 580);
+  --film-w: max(100vw, 100lvh * 1280 / 580);
   position: absolute;
   width: var(--film-w);
   aspect-ratio: 16 / 9;
-  left: calc(50vw - var(--film-w) * var(--film-fx));
+  /* the eye sits a touch left of centre over the whole film */
+  left: calc(50vw - var(--film-w) * 0.48);
   top: calc(50% - var(--film-w) * 9 / 32);
-  animation: film-fade-in 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-@media (orientation: portrait) {
-  .film-frame {
-    --film-w: max(100vw, 100vh * 1280 / 580);
-    --film-w: max(100vw, 100lvh * 1280 / 580);
-    /* the eye sits a touch left of centre over the whole film */
-    --film-fx: 0.48;
-  }
 }
 
 .film-frame > img,
@@ -669,75 +653,17 @@
   display: block;
 }
 
+/* the poster holds until the film has a real frame, then it cross-fades */
 .film-frame video {
   opacity: 0;
+  transition: opacity 900ms ease-out;
 }
 .film-frame[data-ready] video {
   opacity: 1;
 }
 
-.film-bar {
-  position: absolute;
-  left: 0;
-  right: 0;
-  /* 70/720 of the frame, plus a hair so no baked edge can peek through */
-  height: 9.9%;
-  background: #000;
-  transition: transform 1500ms cubic-bezier(0.65, 0, 0.35, 1);
-}
-.film-bar[data-edge="top"] {
-  top: 0;
-}
-.film-bar[data-edge="bottom"] {
-  bottom: 0;
-}
-.film-frame[data-open] .film-bar[data-edge="top"] {
-  transform: translateY(-100%);
-}
-.film-frame[data-open] .film-bar[data-edge="bottom"] {
-  transform: translateY(100%);
-}
-
-/* playback progress, driven by the compositor rather than a JS loop */
-.film-progress {
-  transform-origin: left center;
-  transform: scaleX(0);
-  animation: film-progress var(--film-duration, 20s) linear both paused;
-}
-.film-progress[data-run] {
-  animation-play-state: running;
-}
-
-/* quiet cues that only surface if waiting genuinely drags on */
-.film-cue {
-  opacity: 0;
-  visibility: hidden;
-  animation: film-cue 500ms ease-out both;
-  animation-delay: var(--cue-delay, 700ms);
-}
-
-@keyframes film-fade-in {
-  from {
-    opacity: 0;
-  }
-}
-@keyframes film-progress {
-  to {
-    transform: scaleX(1);
-  }
-}
-@keyframes film-cue {
-  to {
-    opacity: 1;
-    visibility: visible;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .film-frame {
-    animation: none;
-  }
-  .film-bar {
+  .film-frame video {
     transition: none;
   }
 }
