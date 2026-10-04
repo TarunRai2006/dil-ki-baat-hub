@@ -78,7 +78,7 @@ export function ChatThread({
           <p className="truncate font-display text-lg leading-tight text-primary">
             {meta?.alias ?? room.alias}
           </p>
-          <p className="mt-0.5 flex items-center gap-2 font-mono text-[0.55rem] uppercase tracking-[0.18em] text-muted-foreground">
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 font-mono text-[0.55rem] uppercase tracking-[0.18em] text-muted-foreground">
             <span className="inline-flex items-center gap-1.5" role="status" aria-live="polite">
               <span className={`size-1.5 rounded-full ${STATE_TONE[state]}`} aria-hidden="true" />
               {sentFlash && state === "connected" ? "Message sent" : STATE_LABEL[state]}
@@ -185,7 +185,7 @@ export function ChatThread({
             }}
             placeholder={ended ? "This chat has ended" : "Say it however it comes out…"}
             aria-label="Message"
-            className="border-cream/12 bg-background/40 text-sm text-cream placeholder:text-muted-foreground/70"
+            className="border-cream/12 bg-background/40 text-base text-cream sm:text-sm placeholder:text-muted-foreground/70"
           />
           <Button
             type="submit"
@@ -219,7 +219,7 @@ export function ChatWidget({
   return (
     <section
       aria-label="Anonymous chat"
-      className="release-glass fixed bottom-14 right-3 z-[60] flex h-[min(30rem,calc(100svh-6rem))] w-[min(24rem,calc(100vw-1.5rem))] flex-col overflow-hidden sm:right-5"
+      className="release-glass fixed bottom-14 right-3 z-[45] flex h-[min(30rem,calc(100svh-6rem))] w-[min(24rem,calc(100vw-1.5rem))] flex-col overflow-hidden sm:right-5"
     >
       <ChatThread room={room} onClose={onClose} onEnded={onEnded} />
     </section>

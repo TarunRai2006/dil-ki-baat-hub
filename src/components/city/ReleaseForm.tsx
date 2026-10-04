@@ -50,7 +50,9 @@ function Field({
           {label}
         </span>
       </div>
-      {hint && <p className="mt-1.5 pl-8 text-xs leading-relaxed text-muted-foreground">{hint}</p>}
+      {hint && (
+        <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground sm:pl-8">{hint}</p>
+      )}
       <div className="mt-3.5 pl-0 sm:pl-8">{children}</div>
     </motion.div>
   );
@@ -195,7 +197,7 @@ export function ReleaseForm({
             <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-muted-foreground">
               A real person will read this with care. Nothing about it can be traced back to you.
               {chatOpened
-                ? " Your disappearing chat is open in the corner whenever you are ready."
+                ? " Your disappearing chat is ready whenever you are: open it from “Your chat”."
                 : ""}
             </p>
             <Button
@@ -262,7 +264,7 @@ export function ReleaseForm({
                   aria-label="What is on your mind?"
                   aria-invalid={!!problem && content.trim().length < 10}
                   placeholder="Start anywhere. Even mid-sentence."
-                  className="resize-none border-cream/12 bg-background/40 text-sm text-cream placeholder:text-muted-foreground/70 focus-visible:ring-primary/40"
+                  className="resize-none border-cream/12 bg-background/40 text-base text-cream sm:text-sm placeholder:text-muted-foreground/70 focus-visible:ring-primary/40"
                 />
                 <p className="mt-1.5 text-right font-mono text-[0.55rem] text-muted-foreground/60">
                   {content.length}/{CONTENT_MAX}
@@ -321,7 +323,7 @@ export function ReleaseForm({
                   maxLength={QUESTION_MAX}
                   aria-label="One question for the community"
                   placeholder="Was I wrong to walk away?"
-                  className="border-cream/12 bg-background/40 text-sm text-cream placeholder:text-muted-foreground/70 focus-visible:ring-primary/40"
+                  className="border-cream/12 bg-background/40 text-base text-cream sm:text-sm placeholder:text-muted-foreground/70 focus-visible:ring-primary/40"
                 />
               </Field>
 
@@ -352,7 +354,7 @@ export function ReleaseForm({
                   maxLength={NICKNAME_MAX}
                   aria-label="A name that is not yours"
                   placeholder="Gumnam Dost"
-                  className="border-cream/12 bg-background/40 text-sm text-cream placeholder:text-muted-foreground/70 focus-visible:ring-primary/40"
+                  className="border-cream/12 bg-background/40 text-base text-cream sm:text-sm placeholder:text-muted-foreground/70 focus-visible:ring-primary/40"
                 />
               </Field>
 

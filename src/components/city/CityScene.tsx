@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { buildCity, seeded } from "@/lib/unspoken";
@@ -132,17 +132,21 @@ function City() {
   }, [buildings]);
 
   // seed instances once
-  const seededOnce = useRef(false);
+  // Seed every window at mount, before the shaders are pre-compiled: per-instance
+  // colour changes the material's shader variant, and seeding it on the first
+  // frame instead forced a second, blocking compile right as the city appeared.
+  useLayoutEffect(() => {
+    const mesh = windows.current;
+    if (!mesh) return;
+    win.mats.forEach((mm, i) => mesh.setMatrixAt(i, mm));
+    win.colors.forEach((c, i) => mesh.setColorAt(i, c));
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  }, [win]);
+
   useFrame(({ clock }, dt) => {
     const p = cityState.progress;
     const mesh = windows.current;
-    if (mesh && !seededOnce.current) {
-      win.mats.forEach((mm, i) => mesh.setMatrixAt(i, mm));
-      win.colors.forEach((c, i) => mesh.setColorAt(i, c));
-      mesh.instanceMatrix.needsUpdate = true;
-      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-      seededOnce.current = true;
-    }
 
     // buildings rise out of the ground grid
     if (group.current) {

@@ -191,7 +191,7 @@ export function AdminChat({
     (!current.expires_at || new Date(current.expires_at).getTime() > Date.now());
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[19rem_1fr]">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[19rem_minmax(0,1fr)]">
       <aside className="rounded-2xl glass-panel p-3">
         <div className="flex gap-1 rounded-full border border-cream/10 p-1" role="tablist">
           {(["live", "ended"] as const).map((v) => (

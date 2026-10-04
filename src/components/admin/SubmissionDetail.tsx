@@ -46,11 +46,11 @@ type Confirm = { title: string; body: string; action: string; patch: SubmissionP
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-[9.5rem_1fr] gap-3 border-b border-cream/5 py-2 text-sm last:border-b-0">
+    <div className="grid grid-cols-[8rem_minmax(0,1fr)] gap-3 sm:grid-cols-[9.5rem_minmax(0,1fr)] border-b border-cream/5 py-2 text-sm last:border-b-0">
       <dt className="font-mono text-[0.6rem] uppercase tracking-[0.2em] text-muted-foreground">
         {label}
       </dt>
-      <dd className="min-w-0 text-cream/90">{children}</dd>
+      <dd className="min-w-0 break-words text-cream/90">{children}</dd>
     </div>
   );
 }

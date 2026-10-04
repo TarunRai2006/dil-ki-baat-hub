@@ -97,7 +97,7 @@ function AuthPage() {
   return (
     <div className="min-h-screen">
       <SiteHeader />
-      <main className="mx-auto max-w-md px-5 py-16">
+      <main className="mx-auto max-w-md px-5 pb-16 pt-6">
         <h1 className="text-center font-display text-4xl text-gradient-gold">Mentor Access</h1>
         <p className="mt-2 text-center text-sm text-muted-foreground">
           Only approved Dil Ki Baat mentors can open the dashboard.

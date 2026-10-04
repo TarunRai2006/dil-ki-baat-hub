@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Play, Volume2, VolumeX } from "lucide-react";
-import { gsap } from "@/lib/gsap";
-import { cityState } from "@/lib/city-state";
 
 /**
  * The page's journey. The intro owns the first three states, the page the rest.
@@ -32,10 +30,6 @@ export const FILM = {
   /** measured: the baked letterbox bars disappear on this frame */
   letterboxUntil: 4.875,
 } as const;
-
-/** City progress behind the film (same night street) and behind the form (crimson). */
-export const CITY_HANDOFF = 0.78;
-export const CITY_RELEASE = 0.9;
 
 /** states with nothing moving on screen yet: quiet cues surface only if these drag on */
 const WAITING: VideoState[] = ["initializing", "loading", "ready", "buffering"];
@@ -87,18 +81,6 @@ export function VideoIntro({
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const hold = reduced ? 0 : holdMs.current;
     const fade = reduced ? 250 : 750;
-
-    if (reduced) cityState.progress = CITY_RELEASE;
-    else {
-      // the live city keeps walking to the crimson street behind the form
-      gsap.to(cityState, {
-        progress: CITY_RELEASE,
-        duration: 1.9,
-        delay: hold / 1000,
-        ease: "power2.inOut",
-        overwrite: true,
-      });
-    }
 
     let ended = false;
     const finish = () => {
