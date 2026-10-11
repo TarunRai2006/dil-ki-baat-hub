@@ -29,7 +29,6 @@ export function useCityProgress() {
   return p;
 }
 
-
 const EASE = [0.16, 1, 0.3, 1] as const;
 
 /* ------------------------------------------------------------ type motion */
@@ -228,7 +227,10 @@ export function StageText({ p }: { p: number }) {
                     ease: EASE,
                   }}
                   className="font-display text-[2.4rem] font-black leading-none text-crimson-glow sm:text-[4.4rem] md:text-[6rem]"
-                  style={{ display: ch === " " ? "block" : "inline-block", width: ch === " " ? "0.4em" : undefined }}
+                  style={{
+                    display: ch === " " ? "block" : "inline-block",
+                    width: ch === " " ? "0.4em" : undefined,
+                  }}
                 >
                   {ch === " " ? "\u00A0" : ch}
                 </motion.span>

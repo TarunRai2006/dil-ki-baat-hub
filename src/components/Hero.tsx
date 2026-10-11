@@ -69,7 +69,6 @@ export function Hero() {
         },
       });
 
-
       return () => split.revert();
     },
     { scope: root },
@@ -86,7 +85,6 @@ export function Hero() {
         style={{ transformStyle: "preserve-3d" }}
         className="relative z-10 mx-auto flex w-full max-w-4xl flex-col items-center text-center will-change-transform"
       >
-
         <p
           data-hero-fade
           className="mb-8 text-[0.55rem] uppercase tracking-[0.42em] text-primary/70 sm:text-[0.62rem]"
@@ -99,7 +97,6 @@ export function Hero() {
           style={{ transformStyle: "preserve-3d" }}
           className="invisible text-balance font-display text-[clamp(2.6rem,9vw,6.4rem)] font-normal leading-[1.02] text-cream drop-shadow-[0_18px_60px_rgba(0,0,0,0.7)]"
         >
-
           Say the thing you never say.
         </h1>
 
@@ -107,8 +104,8 @@ export function Hero() {
           data-hero-fade
           className="mt-8 max-w-xl text-pretty text-base leading-relaxed text-cream/70 sm:text-lg"
         >
-          Everything you have been carrying quietly has somewhere to go now. No name, no
-          account, no one waiting to judge the shape of it.
+          Everything you have been carrying quietly has somewhere to go now. No name, no account, no
+          one waiting to judge the shape of it.
         </p>
 
         <div data-hero-fade className="mt-12">

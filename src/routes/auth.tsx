@@ -16,7 +16,8 @@ export const Route = createFileRoute("/auth")({
       { title: "Mentor Sign In | Dil Ki Baat" },
       {
         name: "description",
-        content: "Sign in to the Dil Ki Baat mentor dashboard to review stories and reply to chats.",
+        content:
+          "Sign in to the Dil Ki Baat mentor dashboard to review stories and reply to chats.",
       },
       { property: "og:title", content: "Mentor Sign In | Dil Ki Baat" },
       { property: "og:description", content: "Dil Ki Baat mentor and admin access." },
@@ -27,6 +28,22 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
+/** Human wording for Supabase Auth failures; never show raw auth errors. */
+function authMessage(err: unknown, fallback: string): string {
+  const raw = err && typeof err === "object" && "message" in err ? String(err.message) : "";
+  if (/invalid login credentials/i.test(raw)) return "That email and password do not match.";
+  if (/email not confirmed/i.test(raw))
+    return "Confirm your email first: open the link we sent you (check spam too), then sign in.";
+  if (/already registered|already been registered/i.test(raw))
+    return "An account with this email already exists. Try signing in.";
+  if (/password/i.test(raw) && /(least|short|weak)/i.test(raw))
+    return "Please choose a longer, stronger password.";
+  if (/rate limit|too many/i.test(raw))
+    return "Too many attempts. Please wait a minute and try again.";
+  if (/fetch|network/i.test(raw)) return "We could not reach the server. Check your connection.";
+  return fallback;
+}
+
 function AuthPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -36,38 +53,58 @@ function AuthPage() {
   const signIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (error) return toast.error(error.message);
-    navigate({ to: "/admin" });
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) return toast.error(authMessage(error, "Sign in failed. Please try again."));
+      await navigate({ to: "/admin" });
+    } catch (err) {
+      toast.error(authMessage(err, "Sign in failed. Please try again."));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const signUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: `${window.location.origin}/admin` },
-    });
-    setLoading(false);
-    if (error) return toast.error(error.message);
-    toast.success("Account created. You can sign in now.");
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: `${window.location.origin}/admin` },
+      });
+      if (error) return toast.error(authMessage(error, "Could not create the account."));
+      // no session means the project wants the address confirmed before first sign-in
+      if (!data.session)
+        return toast.success(
+          `Check ${email} for a confirmation link (look in spam too), then sign in here. A mentor still has to grant dashboard access.`,
+          { duration: 12_000 },
+        );
+      toast.success("Account created. A mentor has to grant dashboard access before it opens.");
+    } catch (err) {
+      toast.error(authMessage(err, "Could not create the account."));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const google = async () => {
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) return toast.error("Google sign-in failed. Please try again.");
-    if (result.redirected) return;
-    navigate({ to: "/admin" });
+    try {
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+      });
+      if (result.error) return toast.error("Google sign-in failed. Please try again.");
+      if (result.redirected) return;
+      await navigate({ to: "/admin" });
+    } catch {
+      toast.error("Google sign-in failed. Please try again.");
+    }
   };
 
   return (
     <div className="min-h-screen">
       <SiteHeader />
-      <main className="mx-auto max-w-md px-5 py-16">
+      <main className="mx-auto max-w-md px-5 pb-16 pt-6">
         <h1 className="text-center font-display text-4xl text-gradient-gold">Mentor Access</h1>
         <p className="mt-2 text-center text-sm text-muted-foreground">
           Only approved Dil Ki Baat mentors can open the dashboard.

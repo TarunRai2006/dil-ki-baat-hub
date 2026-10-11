@@ -45,7 +45,6 @@ export function SmoothScroll() {
       }
     };
 
-
     // Reduced motion: no smoothing, but the story still needs its clock.
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       const onScroll = () => publish(fromScrollY(window.scrollY), 0);
@@ -61,6 +60,13 @@ export function SmoothScroll() {
       touchMultiplier: 1.4,
     });
 
+    scrollControls.stop = () => lenis.stop();
+    scrollControls.start = () => lenis.start();
+    scrollControls.toElement = (el: HTMLElement) =>
+      lenis.scrollTo(el, {
+        offset: -Math.max(0, (window.innerHeight - el.offsetHeight) / 2),
+        duration: 1.1,
+      });
     scrollControls.to = (p: number) => {
       const { top, span } = track();
       lenis.scrollTo(top + span * p, { duration: 1.6 });
@@ -85,6 +91,10 @@ export function SmoothScroll() {
     return () => {
       window.removeEventListener("pointermove", pointer);
       gsap.ticker.remove(raf);
+      scrollControls.stop = () => {};
+      scrollControls.start = () => {};
+      scrollControls.toElement = (el: HTMLElement) =>
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
       lenis.destroy();
       ScrollTrigger.getAll().forEach((t) => t.kill());
     };

@@ -1,25 +1,17 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Heart, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import {
-  CATEGORIES,
-  HIGHLIGHT_OPTIONS,
-  INTENTS,
-  MOOD_LABELS,
-  TTL_OPTIONS,
-  getAnonUserId,
-  saveRoom,
-} from "@/lib/dilkibaat";
+import { friendlyError, submitConfession, type StoredRoom } from "@/lib/confession";
+import { CATEGORIES, HIGHLIGHT_OPTIONS, INTENTS, MOOD_LABELS, TTL_OPTIONS } from "@/lib/dilkibaat";
 
 const schema = z.object({
   content: z
     .string()
     .trim()
     .min(10, { message: "Please share at least a sentence or two." })
-    .max(5000, { message: "Please keep it under 5000 characters." }),
-  community_question: z.string().trim().max(300).optional(),
+    .max(2000, { message: "Please keep it under 2000 characters." }),
+  community_question: z.string().trim().max(200).optional(),
   nickname: z.string().trim().max(40).optional(),
 });
 
@@ -45,11 +37,7 @@ function Ask({
   );
 }
 
-export function ConfessionForm({
-  onStartChat,
-}: {
-  onStartChat: (room: { roomId: string; alias: string; ttl: string }) => void;
-}) {
+export function ConfessionForm({ onStartChat }: { onStartChat: (room: StoredRoom) => void }) {
   const [content, setContent] = useState("");
   const [categories, setCategories] = useState<string[]>([]);
   const [intent, setIntent] = useState("Both");
@@ -61,6 +49,8 @@ export function ConfessionForm({
   const [ttl, setTtl] = useState("24h");
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
+  // one id per confession: retries and double clicks can never store it twice
+  const requestId = useRef(crypto.randomUUID());
 
   const toggleCategory = (c: string) =>
     setCategories((prev) => (prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]));
@@ -82,30 +72,29 @@ export function ConfessionForm({
     }
 
     setLoading(true);
-    const id = crypto.randomUUID();
-    const alias = `Anonymous Friend #${Math.floor(100 + Math.random() * 900)}`;
-
-    const { error } = await supabase.from("submissions").insert({
-      id,
-      content: parsed.data.content,
-      category: categories.length ? categories.join(", ") : "Other",
-      intent,
-      emotional_state: mood,
-      community_question: parsed.data.community_question || null,
-      highlight_on_instagram: highlight,
-      nickname: parsed.data.nickname || null,
-      alias,
-      anon_user_id: getAnonUserId(),
-      chat_enabled: chatEnabled,
-      chat_ttl: ttl,
-      status: "Pending",
-    });
-    setLoading(false);
-
-    if (error) {
-      toast.error("Could not send your story. Please try again.");
+    let result: Awaited<ReturnType<typeof submitConfession>>;
+    try {
+      result = await submitConfession(
+        {
+          content: parsed.data.content,
+          category: categories.length ? categories.slice(0, 4).join(", ") : "Other",
+          intent,
+          emotional_state: mood,
+          community_question: parsed.data.community_question ?? "",
+          highlight_on_instagram: highlight,
+          nickname: parsed.data.nickname ?? "",
+          chat_enabled: chatEnabled,
+          chat_ttl: ttl,
+        },
+        requestId.current,
+      );
+    } catch (err) {
+      setLoading(false);
+      toast.error(friendlyError(err, "Could not send your story. Please try again."));
       return;
     }
+    setLoading(false);
+    requestId.current = crypto.randomUUID();
 
     toast.success("Received. Someone will read this with care \u{1F90D}");
     setContent("");
@@ -115,10 +104,7 @@ export function ConfessionForm({
     setMood(3);
     setAgreed(false);
 
-    if (chatEnabled) {
-      saveRoom(id, alias);
-      onStartChat({ roomId: id, alias, ttl });
-    }
+    if (result.room) onStartChat(result.room);
   };
 
   const pill = (active: boolean) =>
@@ -146,11 +132,8 @@ export function ConfessionForm({
           placeholder="Start anywhere, even in the middle."
           className="ink-line w-full resize-y px-0 py-3 text-lg leading-relaxed text-ink placeholder:text-ink/35"
         />
-        <p className="text-xs text-ink/45">
-          Nobody sees your name, because we never ask for it.
-        </p>
+        <p className="text-xs text-ink/45">Nobody sees your name, because we never ask for it.</p>
       </div>
-
 
       <fieldset className="space-y-3">
         <legend className="font-display text-[1.35rem] italic text-ink">
@@ -176,9 +159,7 @@ export function ConfessionForm({
         <legend className="font-display text-[1.35rem] italic text-ink">
           What would help most right now?
         </legend>
-        <p className="text-sm text-ink/55">
-          You are allowed to want nothing but a listener.
-        </p>
+        <p className="text-sm text-ink/55">You are allowed to want nothing but a listener.</p>
         <div className="flex flex-wrap gap-2 pt-1">
           {INTENTS.map((i) => (
             <button

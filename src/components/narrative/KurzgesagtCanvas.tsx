@@ -1,15 +1,7 @@
 import { useEffect, useRef } from "react";
 import { gsap } from "@/lib/gsap";
 import { scrollState } from "@/lib/scroll-state";
-import {
-  ACTS,
-  LOOP_CARDS,
-  actAlpha,
-  actLocal,
-  clamp01,
-  lerp,
-  smoothstep,
-} from "@/lib/narrative";
+import { ACTS, LOOP_CARDS, actAlpha, actLocal, clamp01, lerp, smoothstep } from "@/lib/narrative";
 
 /* ------------------------------------------------------------------ *
  * A hand-written 2D vector engine.
@@ -169,7 +161,7 @@ function actVoid(c: Ctx, a: number, local: number, t: number) {
   // drifting bubbles and hearts
   for (let i = 0; i < 12; i++) {
     const x = cx + (rnd(i) - 0.5) * 900;
-    const drift = ((t * 22 + rnd(i + 9) * 700) % 760);
+    const drift = (t * 22 + rnd(i + 9) * 700) % 760;
     const y = H + 40 - drift;
     const s = 0.6 + rnd(i + 3) * 0.7;
     const wob = Math.sin(t * 1.4 + i) * 15;
@@ -224,7 +216,7 @@ function actBiology(c: Ctx, a: number, local: number, t: number) {
 
   // alarm rings at ~1.2Hz
   for (let i = 0; i < 3; i++) {
-    const ph = ((t * 1.2 + i / 3) % 1);
+    const ph = (t * 1.2 + i / 3) % 1;
     c.strokeStyle = withAlpha(ALARM, a * (1 - ph) * 0.8);
     c.lineWidth = 3 - ph * 2;
     c.beginPath();
@@ -374,7 +366,7 @@ function actLoop(c: Ctx, a: number, local: number, t: number) {
   c.globalAlpha = a;
   c.textAlign = "center";
   for (let i = 0; i < LOOP_CARDS.length; i++) {
-    const z = ((t * 0.16 + i / LOOP_CARDS.length + local * 0.35) % 1);
+    const z = (t * 0.16 + i / LOOP_CARDS.length + local * 0.35) % 1;
     const s = 0.2 + z * 0.72;
     const ang = rnd(i) * Math.PI * 2;
     const spread = z * 430;
@@ -445,7 +437,7 @@ function actShatter(c: Ctx, a: number, local: number, t: number) {
   // embers rising
   for (let i = 0; i < 180; i++) {
     const seed = rnd(i);
-    const rise = ((t * 0.11 + seed) % 1);
+    const rise = (t * 0.11 + seed) % 1;
     const x = cx + (rnd(i + 11) - 0.5) * 900 * (0.25 + rise);
     const y = cy + 120 - rise * 720;
     const r = 1.4 + rnd(i + 7) * 2.6;
@@ -532,7 +524,7 @@ function actBridge(c: Ctx, a: number, local: number, t: number) {
   glow(c, (lx + rx) / 2, cy, 300, "#7FE3C0", 0.35 * a * inn);
 
   for (let i = 0; i < 26; i++) {
-    const p = ((t * 0.3 + i / 26) % 1);
+    const p = (t * 0.3 + i / 26) % 1;
     const x = lerp(lx, rx, p);
     const y = cy + Math.sin(p * Math.PI * 2 + t * 2) * 26;
     c.fillStyle = withAlpha("#FFE9A8", a * inn * (1 - Math.abs(p - 0.5) * 1.4));
@@ -584,7 +576,7 @@ function actSanctuary(c: Ctx, a: number, local: number, t: number) {
 
   // sparks
   for (let i = 0; i < 46; i++) {
-    const p = ((t * 0.34 + rnd(i)) % 1);
+    const p = (t * 0.34 + rnd(i)) % 1;
     const x = cx + Math.sin(t * 1.5 + i) * 60 * p;
     const y = cy - 40 - p * 420;
     c.fillStyle = withAlpha("#FFD98A", a * (1 - p) * 0.8);

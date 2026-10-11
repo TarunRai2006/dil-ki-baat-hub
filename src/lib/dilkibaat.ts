@@ -121,7 +121,6 @@ export const FAQS = [
   },
 ];
 
-
 export const HELPLINES = [
   {
     name: "Tele-MANAS (Govt. of India)",
@@ -147,18 +146,4 @@ export function getAnonUserId(): string {
     window.localStorage.setItem(ANON_KEY, id);
   }
   return id;
-}
-
-const ROOMS_KEY = "dkb_rooms";
-
-export function saveRoom(roomId: string, alias: string) {
-  if (typeof window === "undefined") return;
-  const rooms = JSON.parse(window.localStorage.getItem(ROOMS_KEY) || "[]");
-  window.localStorage.setItem(ROOMS_KEY, JSON.stringify([{ roomId, alias }, ...rooms].slice(0, 10)));
-}
-
-export function ttlToExpiry(ttl: string): string | null {
-  if (ttl === "1h") return new Date(Date.now() + 60 * 60 * 1000).toISOString();
-  if (ttl === "24h") return new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-  return null;
 }

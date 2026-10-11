@@ -36,9 +36,7 @@ export function AudioToggle() {
         className={`absolute inset-0 rounded-full bg-primary/10 transition-opacity duration-700 ${on ? "animate-pulse-ring opacity-100" : "opacity-0"}`}
       />
       {on ? <Volume2 className="relative size-4" /> : <VolumeX className="relative size-4" />}
-      <span className="relative hidden sm:inline">
-        {on ? "Sound on" : "Sound off"}
-      </span>
+      <span className="relative hidden sm:inline">{on ? "Sound on" : "Sound off"}</span>
     </button>
   );
 }

@@ -18,14 +18,12 @@ const LAYERS = [
   {
     text: "What if I am wasting my twenties?",
     speed: -120,
-    className:
-      "text-gradient-warm text-[clamp(1.9rem,7vw,4.6rem)] self-end sm:pl-[16%] text-right",
+    className: "text-gradient-warm text-[clamp(1.9rem,7vw,4.6rem)] self-end sm:pl-[16%] text-right",
   },
   {
     text: "Bachpan ke dost ab stranger se lagte hain.",
     speed: -380,
-    className:
-      "blur-[4px] text-primary/35 text-[clamp(1.4rem,5vw,3rem)] self-start sm:pr-[26%]",
+    className: "blur-[4px] text-primary/35 text-[clamp(1.4rem,5vw,3rem)] self-start sm:pr-[26%]",
   },
   {
     text: "I smile all day and overthink at 2 AM.",
@@ -51,7 +49,12 @@ export function SentimentLayers() {
             y: speed * 0.5,
             autoAlpha: 1,
             ease: "none",
-            scrollTrigger: { trigger: root.current, start: "top bottom", end: "bottom top", scrub: 1 },
+            scrollTrigger: {
+              trigger: root.current,
+              start: "top bottom",
+              end: "bottom top",
+              scrub: 1,
+            },
           },
         );
       });

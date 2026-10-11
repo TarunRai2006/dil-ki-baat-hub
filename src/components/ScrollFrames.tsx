@@ -72,7 +72,6 @@ export function ScrollWord({
         }`}
       />
 
-
       <motion.div
         style={{ y: textY, opacity }}
         className={`mt-6 max-w-xl ${align === "right" ? "ml-auto" : ""}`}

@@ -36,7 +36,17 @@ export function clearFocus() {
 }
 
 /** Registered by SmoothScroll so any component can drive the timeline. */
-export const scrollControls: { to: (progress: number) => void } = {
+export const scrollControls: {
+  to: (progress: number) => void;
+  /** pause / resume smooth scrolling (no-ops when Lenis is not running) */
+  stop: () => void;
+  start: () => void;
+  /** bring an element into view, centred, through Lenis when it is running */
+  toElement: (el: HTMLElement) => void;
+} = {
+  stop: () => {},
+  start: () => {},
+  toElement: (el) => el.scrollIntoView({ behavior: "smooth", block: "center" }),
   to: (progress: number) => {
     if (typeof window === "undefined") return;
     const max = document.documentElement.scrollHeight - window.innerHeight;

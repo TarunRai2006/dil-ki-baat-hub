@@ -36,14 +36,7 @@ function voidField(): Shape {
       const rad = Math.sqrt(seeded(i, 3)) * 0.9;
       a.set([Math.cos(t) * rad * 0.7, Math.sin(t) * rad - 0.6, seeded(i, 4) * 1.2 - 0.6], i * 3);
     } else {
-      a.set(
-        [
-          (seeded(i, 5) - 0.5) * 22,
-          (seeded(i, 6) - 0.5) * 12,
-          (r - 0.5) * 10 - 2,
-        ],
-        i * 3,
-      );
+      a.set([(seeded(i, 5) - 0.5) * 22, (seeded(i, 6) - 0.5) * 12, (r - 0.5) * 10 - 2], i * 3);
     }
   }
   return a;
@@ -307,8 +300,7 @@ function Cloud() {
 
     // Whole-cloud choreography.
     spin.current += dt * (0.05 + anxiety * 0.55);
-    el.rotation.y =
-      spin.current * (1 - smoothstep(0.62, 0.78, p)) + scrollState.px * 0.28;
+    el.rotation.y = spin.current * (1 - smoothstep(0.62, 0.78, p)) + scrollState.px * 0.28;
     el.rotation.x = -scrollState.py * 0.16 + Math.sin(time * 0.18) * 0.05;
     el.rotation.z = anxiety * Math.sin(time * 0.9) * 0.06;
 

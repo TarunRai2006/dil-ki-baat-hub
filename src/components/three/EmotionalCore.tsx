@@ -232,7 +232,10 @@ function Dust() {
       const s = seeds[i];
       let tx = home[i3] + Math.sin(t * 0.22 + s) * 0.55 + scrollState.px * 0.6;
       let ty =
-        home[i3 + 1] + Math.cos(t * 0.19 + s) * 0.5 - scrollState.velocity * 2.2 + scrollState.py * 0.4;
+        home[i3 + 1] +
+        Math.cos(t * 0.19 + s) * 0.5 -
+        scrollState.velocity * 2.2 +
+        scrollState.py * 0.4;
       const tz = home[i3 + 2] + Math.sin(t * 0.16 + s * 1.4) * 0.4;
 
       if (pull) {

@@ -96,7 +96,14 @@ function useCracks() {
   return useMemo(() => {
     const rnd = seeded(31337);
     const lines: { d: string; len: number; w: number }[] = [];
-    const branch = (x: number, y: number, angle: number, length: number, depth: number, width: number) => {
+    const branch = (
+      x: number,
+      y: number,
+      angle: number,
+      length: number,
+      depth: number,
+      width: number,
+    ) => {
       let cx = x;
       let cy = y;
       let a = angle;
@@ -113,7 +120,14 @@ function useCracks() {
       if (depth > 0) {
         const kids = rnd() > 0.45 ? 2 : 1;
         for (let k = 0; k < kids; k++) {
-          branch(cx, cy, a + (rnd() - 0.5) * 1.5, length * (0.42 + rnd() * 0.3), depth - 1, width * 0.6);
+          branch(
+            cx,
+            cy,
+            a + (rnd() - 0.5) * 1.5,
+            length * (0.42 + rnd() * 0.3),
+            depth - 1,
+            width * 0.6,
+          );
         }
       }
     };
@@ -451,7 +465,14 @@ export function DayGate({ onEnter }: { onEnter: () => void }) {
                   style={{ transform: `scale(${0.68 + progress * 0.6})` }}
                 />
                 <svg viewBox="0 0 150 150" className="absolute inset-0 size-full -rotate-90">
-                  <circle cx="75" cy="75" r={R} fill="none" stroke="rgb(255 252 244 / 55%)" strokeWidth="1.2" />
+                  <circle
+                    cx="75"
+                    cy="75"
+                    r={R}
+                    fill="none"
+                    stroke="rgb(255 252 244 / 55%)"
+                    strokeWidth="1.2"
+                  />
                   <circle
                     cx="75"
                     cy="75"
