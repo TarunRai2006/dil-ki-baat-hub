@@ -116,7 +116,7 @@ Expiry is also enforced on every read and write, so it holds either way.
 - **Submissions** tab: every confession, with server-side search, filters,
   sorting and pagination. New ones appear live. Open one to see every field,
   set the status (Pending / Reviewed / Approved / Rejected), feature it, add
-  private notes, archive it, or **Open chat** if the writer asked for one.
+  private notes, archive it, or open its associated chat.
 - **Chats** tab: every chat room, live or ended, with the latest message, an
   unread dot when the visitor spoke last, and a badge on the tab. Open a room
   to read the conversation, see **What they wrote**, reply (or use a quick
@@ -130,9 +130,9 @@ Expiry is also enforced on every read and write, so it holds either way.
 
 An active chat is restored from a secret kept in the visitor's browser storage.
 After a refresh or reopening the site in the same browser profile and origin,
-use the prominent **Continue your chat** button above the form. The default
-chat lifetime is 24 hours; the selected expiry and the server decide when it
-ends. The form appearing again does not remove an active chat.
+the chat appears automatically and the form stays hidden. The visitor can use
+**End chat** to close it and return to the form. The default chat lifetime is
+24 hours; the selected expiry and the server decide when it ends.
 
 There is no account or cross-device recovery. Changing browser profiles or
 switching between `localhost` and `127.0.0.1` uses different storage. Clearing
@@ -152,12 +152,13 @@ site data or using a private window loses the chat access secret.
    `VITE_VAPID_PUBLIC_KEY` may go in the local Vite env file. Restart/rebuild
    after changing build-time env vars. Set the same secrets in the deployment
    provider before testing a deployed build.
-3. Apply `supabase/migrations/20261012120000_push_subscriptions.sql` with
-   `npx supabase db push` against the intended project. The migration creates
-   a service-role-only subscription table and an independent abuse-rate bucket.
-4. Serve the app on HTTPS or `localhost`. In a fresh Chrome/Edge/Firefox
+3. Apply all pending migrations with `npx supabase db push` against the intended
+   project, including the push subscriptions and active-chat safeguards. The
+   push migration creates a service-role-only subscription table and an
+   independent abuse-rate bucket.
+4. Serve the app on HTTPS, `localhost`, or `127.0.0.1`. In a fresh Chrome/Edge/Firefox
    profile, fill the form and press **Let it go**. Choose **Allow**. Confirm
-   the confession success view and a row in `push_subscriptions` in Supabase
+   the chat opens and a row appears in `push_subscriptions` in Supabase
    Studio. The subscription row contains endpoint and encryption keys only;
    do not copy those values into screenshots or support messages.
 5. Sign in to `/admin`, open **Push Notifications**, enter a short message,
@@ -169,9 +170,10 @@ site data or using a private window loses the chat access secret.
    platform and is not guaranteed.
 6. In another fresh browser profile, choose **Block** on the form prompt.
    The confession must still succeed and no subscription row should be added.
-   Submit again in the allowed profile: no second permission prompt and no
-   duplicate endpoint row. If the browser lacks Push API support, the form
-   still works. Browser site settings can reset permission for repeat testing.
+   End the active chat, then submit again in the allowed profile: no second
+   permission prompt and no duplicate endpoint row. If the browser lacks Push
+   API support, the form still works. Browser site settings can reset permission
+   for repeat testing.
    On iPhone or iPad, add the site to the Home Screen, open that installed app,
    and submit there; ordinary Safari tabs cannot subscribe to iOS Web Push.
 
