@@ -11,6 +11,7 @@ import { SubmissionFilters } from "@/components/admin/SubmissionFilters";
 import { SubmissionList } from "@/components/admin/SubmissionList";
 import { SubmissionDetail } from "@/components/admin/SubmissionDetail";
 import { AdminChat } from "@/components/admin/AdminChat";
+import { PushNotifications } from "@/components/admin/PushNotifications";
 import {
   DEFAULT_FILTERS,
   adminSession,
@@ -257,6 +258,10 @@ function AdminPage() {
       <Tabs value={tab} onValueChange={setTab} className="mt-8">
         <TabsList>
           <TabsTrigger value="submissions">Submissions</TabsTrigger>
+          <TabsTrigger value="push">
+            <span className="sm:hidden">Push</span>
+            <span className="hidden sm:inline">Push Notifications</span>
+          </TabsTrigger>
           <TabsTrigger value="chats" className="gap-2">
             Chats
             {(liveRooms.data?.length ?? 0) > 0 && (
@@ -314,6 +319,9 @@ function AdminPage() {
             seen={seen}
             onSeen={markSeen}
           />
+        </TabsContent>
+        <TabsContent value="push" className="mt-4">
+          <PushNotifications />
         </TabsContent>
       </Tabs>
 

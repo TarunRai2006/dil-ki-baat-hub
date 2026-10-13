@@ -130,7 +130,7 @@ describe("friendlyError: never show raw database errors", () => {
 describe("submitConfession", () => {
   beforeEach(() => rpc.mockReset());
 
-  it("sends every field to submit_confession with the request id, and stores the room", async () => {
+  it("sends every field and declared age group with the request id, and stores the room", async () => {
     respond([
       {
         submission_id: "s1",
@@ -140,9 +140,9 @@ describe("submitConfession", () => {
         room_expires_at: null,
       },
     ]);
-    const result = await submitConfession(validConfession, "req-1");
+    const result = await submitConfession(validConfession, "req-1", "18+");
     const [fn, args] = rpc.mock.calls[0];
-    expect(fn).toBe("submit_confession");
+    expect(fn).toBe("submit_confession_v2");
     expect(args).toMatchObject({
       _content: validConfession.content,
       _category: "Career",
@@ -154,6 +154,7 @@ describe("submitConfession", () => {
       _chat_enabled: true,
       _chat_ttl: "24h",
       _client_request_id: "req-1",
+      _age_group: "18+",
     });
     expect(typeof args._anon_user_id).toBe("string");
     expect(result.room?.roomId).toBe("r1");
@@ -161,13 +162,15 @@ describe("submitConfession", () => {
   });
 
   it("validates before any network call", async () => {
-    await expect(submitConfession({ ...validConfession, content: "x" }, "req")).rejects.toThrow();
+    await expect(
+      submitConfession({ ...validConfession, content: "x" }, "req", "18+"),
+    ).rejects.toThrow();
     expect(rpc).not.toHaveBeenCalled();
   });
 
   it("surfaces the server error (the form turns it into friendly text)", async () => {
     respond(null, { message: "rate_limited" });
-    await expect(submitConfession(validConfession, "req-2")).rejects.toMatchObject({
+    await expect(submitConfession(validConfession, "req-2", "18+")).rejects.toMatchObject({
       message: "rate_limited",
     });
   });
@@ -176,7 +179,11 @@ describe("submitConfession", () => {
     respond([
       { submission_id: "s2", alias: "A", room_id: null, room_token: null, room_expires_at: null },
     ]);
-    const result = await submitConfession({ ...validConfession, chat_enabled: false }, "req-3");
+    const result = await submitConfession(
+      { ...validConfession, chat_enabled: false },
+      "req-3",
+      "18+",
+    );
     expect(result.room).toBeNull();
     expect(latestLiveRoom()).toBeNull();
   });

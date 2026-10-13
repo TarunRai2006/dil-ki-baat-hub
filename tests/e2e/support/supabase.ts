@@ -68,7 +68,7 @@ export async function mockSupabase(page: Page, opts: MockOptions = {}) {
     if (req.method() === "OPTIONS") return route.fulfill({ status: 204, headers: cors });
     const url = new URL(req.url());
     const body = (req.postDataJSON?.() ?? {}) as Record<string, unknown>;
-    const fn = url.pathname.match(/\/rpc\/([a-z_]+)/)?.[1] ?? url.pathname.split("/").pop()!;
+    const fn = url.pathname.match(/\/rpc\/([a-z0-9_]+)/)?.[1] ?? url.pathname.split("/").pop()!;
     calls.push({ fn, method: req.method(), query: url.searchParams, body });
     const json = (data: unknown, status = 200, extra: Record<string, string> = {}) =>
       route.fulfill({
@@ -94,7 +94,7 @@ export async function mockSupabase(page: Page, opts: MockOptions = {}) {
     switch (fn) {
       case "get_public_whispers":
         return json(whispers.map((excerpt) => ({ excerpt })));
-      case "submit_confession":
+      case "submit_confession_v2":
         if (failFirstSubmit) {
           const f = failFirstSubmit;
           failFirstSubmit = undefined;
@@ -131,6 +131,8 @@ export async function mockSupabase(page: Page, opts: MockOptions = {}) {
             client_msg_id: body._client_msg_id,
           },
         ]);
+      case "end_chat_room":
+        return json(true);
     }
 
     // ---- admin functions (the database enforces these; here we model an admin)

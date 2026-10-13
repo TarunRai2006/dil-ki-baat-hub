@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
+import { Link } from "@tanstack/react-router";
 import { Loader2, ArrowRight, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { CATEGORIES, HIGHLIGHT_OPTIONS, INTENTS, MOOD_LABELS, TTL_OPTIONS } from "@/lib/dilkibaat";
@@ -19,8 +19,18 @@ import {
 } from "@/lib/confession";
 import { scrollControls } from "@/lib/scroll-state";
 import { playClick, playRelease } from "@/lib/audio-engine";
+import { subscribeToPush, type PushOptInStatus } from "@/lib/push-client";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
+
+const PUSH_STATUS_MESSAGE: Record<PushOptInStatus, string> = {
+  enabled: "Browser updates enabled. Alerts appear through your browser or device.",
+  blocked: "Notifications are blocked here. Your words were still submitted.",
+  dismissed: "Notifications were not enabled. Your words were still submitted.",
+  unsupported: "This browser cannot receive push updates. Your words were still submitted.",
+  failed:
+    "Notifications were allowed, but the subscription could not be saved. Your words were still submitted.",
+};
 
 /** A numbered, hairline-separated section. Deliberately not a box. */
 function Field({
@@ -86,26 +96,26 @@ function Pill({
 /** The release panel that floats in once the city has turned crimson. */
 export function ReleaseForm({
   onReleased,
+  onPushStatus,
 }: {
   onReleased: (text: string, room: StoredRoom | null) => void;
+  onPushStatus: (status: PushOptInStatus | null) => void;
 }) {
   const [content, setContent] = useState("");
+  const [ageGroup, setAgeGroup] = useState<"16-17" | "18+" | null>(null);
   const [category, setCategory] = useState<string>("Relationship");
   const [intent, setIntent] = useState<string>("Both");
   const [mood, setMood] = useState(2);
   const [question, setQuestion] = useState("");
-  const [highlight, setHighlight] = useState<string>("Maybe");
+  const [highlight, setHighlight] = useState<string>("No");
   const [nickname, setNickname] = useState("");
-  const [chat, setChat] = useState(true);
   const [ttl, setTtl] = useState<string>("24h");
   const [loading, setLoading] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [released, setReleased] = useState(false);
-  const [chatOpened, setChatOpened] = useState(false);
+  const [pushStatus, setPushStatus] = useState<PushOptInStatus | null>(null);
   const successRef = useRef<HTMLHeadingElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const refocus = useRef(false);
   const inFlight = useRef(false);
 
   // One id per version of the confession: a double click or a retry of the
@@ -113,10 +123,16 @@ export function ReleaseForm({
   const requestId = useRef<string>("");
   useEffect(() => {
     requestId.current = crypto.randomUUID();
-  }, [content, category, intent, mood, question, highlight, nickname, chat, ttl]);
+  }, [content, category, intent, mood, question, highlight, nickname, ttl]);
 
   const submit = async () => {
     if (inFlight.current) return;
+    if (!ageGroup) {
+      const message = "Please confirm that you are at least 16 before submitting.";
+      setProblem(message);
+      toast.error(message);
+      return;
+    }
     const input = {
       content,
       category,
@@ -125,7 +141,7 @@ export function ReleaseForm({
       community_question: question,
       highlight_on_instagram: highlight,
       nickname,
-      chat_enabled: chat,
+      chat_enabled: true,
       chat_ttl: ttl,
     };
     const parsed = confessionSchema.safeParse(input);
@@ -138,13 +154,19 @@ export function ReleaseForm({
     inFlight.current = true;
     setLoading(true);
     setProblem(null);
+    // Start the native prompt during this click. Push is independent of the confession.
+    setPushStatus(null);
+    onPushStatus(null);
+    void subscribeToPush().then((status) => {
+      setPushStatus(status);
+      onPushStatus(status);
+    });
     try {
-      const result = await submitConfession(input, requestId.current);
+      const result = await submitConfession(input, requestId.current, ageGroup);
       playRelease();
       onReleased(parsed.data.content, result.room);
       setContent("");
       setQuestion("");
-      setChatOpened(!!result.room);
       setReleased(true);
       // the confirmation is shorter than the form: bring the panel back into view
       if (panelRef.current) scrollControls.toElement(panelRef.current);
@@ -185,21 +207,24 @@ export function ReleaseForm({
               <span className="block italic text-gradient-gold">Thank you for sharing.</span>
             </h2>
             <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-muted-foreground">
-              A real person will read this with care. Nothing about it can be traced back to you.
-              {chatOpened
-                ? " Your disappearing chat is ready whenever you are: open it from “Your chat”."
-                : ""}
+              Your story is in the mentor review queue. Your private chat is opening in this
+              browser.
             </p>
-            <Button
-              variant="ghost"
-              className="mt-8 rounded-full font-mono text-[0.62rem] uppercase tracking-[0.26em] text-primary"
-              onClick={() => {
-                refocus.current = true;
-                setReleased(false);
-              }}
-            >
-              Write something else
-            </Button>
+            <p role="status" className="mx-auto mt-4 max-w-md text-xs text-muted-foreground">
+              {pushStatus ? PUSH_STATUS_MESSAGE[pushStatus] : "Checking browser updates…"}
+            </p>
+            {(pushStatus === "failed" || pushStatus === "dismissed") && (
+              <Button
+                variant="secondary"
+                className="mt-3 rounded-full"
+                onClick={() => {
+                  setPushStatus(null);
+                  void subscribeToPush().then(setPushStatus);
+                }}
+              >
+                Try notifications again
+              </Button>
+            )}
             <p className="mt-6 font-mono text-[0.5rem] uppercase tracking-[0.22em] text-muted-foreground/70">
               In crisis? Tele-MANAS 14416 · Vandrevala 9999 666 555
             </p>
@@ -211,12 +236,6 @@ export function ReleaseForm({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.35, ease: EASE }}
-            onAnimationComplete={() => {
-              // back from the success view: put the cursor where the next words go
-              if (!refocus.current) return;
-              refocus.current = false;
-              textareaRef.current?.focus({ preventScroll: true });
-            }}
           >
             <p className="font-mono text-[0.55rem] uppercase tracking-[0.36em] text-primary/75">
               your turn · anonymous
@@ -226,9 +245,32 @@ export function ReleaseForm({
               <span className="block italic text-gradient-gold">rehearsing in your head.</span>
             </h2>
             <p className="mt-3 max-w-lg text-xs leading-relaxed text-muted-foreground sm:text-sm">
-              No name, no email, no account. Nobody can trace this back to you — that is exactly why
-              people finally tell the truth here.
+              No account, email, or real name is required. Share only what you choose.
             </p>
+
+            <div className="mt-6 rounded-2xl border border-primary/25 bg-primary/5 p-4">
+              <p className="font-mono text-[0.58rem] uppercase tracking-[0.22em] text-cream/85">
+                Age check · no date of birth is stored
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Pill
+                  active={ageGroup === "16-17"}
+                  onClick={() => {
+                    setAgeGroup("16-17");
+                    setHighlight("No");
+                  }}
+                >
+                  I am 16–17
+                </Pill>
+                <Pill active={ageGroup === "18+"} onClick={() => setAgeGroup("18+")}>
+                  I am 18 or older
+                </Pill>
+              </div>
+              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                If you are under 16, please do not submit. If you are 16–17, consider involving a
+                trusted adult; public sharing stays off for this visit.
+              </p>
+            </div>
 
             <div className="mt-7 space-y-5">
               <Field
@@ -238,7 +280,6 @@ export function ReleaseForm({
                 delay={0.15}
               >
                 <Textarea
-                  ref={textareaRef}
                   value={content}
                   onChange={(e) => {
                     setContent(e.target.value);
@@ -315,11 +356,15 @@ export function ReleaseForm({
               <Field
                 n="06"
                 label="Can we share this anonymously?"
-                hint="Never with your name or any detail that could identify you. Only the words."
+                hint={
+                  ageGroup === "16-17"
+                    ? "Public sharing is off for visitors aged 16–17."
+                    : "Only Yes permits the team to consider a reviewed anonymous excerpt. No and Maybe stay private."
+                }
                 delay={0.56}
               >
                 <div className="flex flex-wrap gap-2">
-                  {HIGHLIGHT_OPTIONS.map((h) => (
+                  {HIGHLIGHT_OPTIONS.filter((h) => ageGroup !== "16-17" || h === "No").map((h) => (
                     <Pill key={h} active={highlight === h} onClick={() => setHighlight(h)}>
                       {h}
                     </Pill>
@@ -345,32 +390,17 @@ export function ReleaseForm({
 
               <Field
                 n="08"
-                label="Talk to someone right now?"
-                hint="A live, anonymous chat that deletes itself. Nothing is kept after it closes."
+                label="How long should your chat stay open?"
+                hint="Your private chat opens after you submit. You can return in this browser until you end it or it expires."
                 delay={0.72}
               >
-                <div className="flex items-center gap-3">
-                  <Switch checked={chat} onCheckedChange={setChat} />
-                  <span className="text-xs text-muted-foreground">
-                    {chat
-                      ? "Open a disappearing chat with me"
-                      : "No chat, I just needed to write it"}
-                  </span>
+                <div className="flex flex-wrap gap-2">
+                  {TTL_OPTIONS.map((t) => (
+                    <Pill key={t.value} active={ttl === t.value} onClick={() => setTtl(t.value)}>
+                      {t.label}
+                    </Pill>
+                  ))}
                 </div>
-                {chat && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    transition={{ duration: 0.5, ease: EASE }}
-                    className="mt-4 flex flex-wrap gap-2 overflow-hidden"
-                  >
-                    {TTL_OPTIONS.map((t) => (
-                      <Pill key={t.value} active={ttl === t.value} onClick={() => setTtl(t.value)}>
-                        {t.label}
-                      </Pill>
-                    ))}
-                  </motion.div>
-                )}
               </Field>
             </div>
 
@@ -385,6 +415,18 @@ export function ReleaseForm({
                 {loading ? "Letting go…" : "Let it go"}
                 <ArrowRight className="size-4 transition-transform duration-300 group-hover:translate-x-1" />
               </Button>
+              <p className="mt-3 text-center text-xs leading-relaxed text-muted-foreground">
+                Your browser may ask about occasional anonymous updates. Notifications are optional;
+                your submission continues either way. A browser push subscription is stored only if
+                you allow.
+              </p>
+              <p className="mt-2 text-center text-xs text-muted-foreground">
+                Please read our{" "}
+                <Link to="/terms" className="text-primary underline underline-offset-4">
+                  Terms &amp; Privacy
+                </Link>{" "}
+                before sharing.
+              </p>
               <div aria-live="polite" className="mt-3 min-h-5 text-center text-xs">
                 {problem && (
                   <p role="alert" className="text-destructive">

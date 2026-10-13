@@ -1,0 +1,11 @@
+{
+  "name": "Dil Ki Baat",
+  "short_name": "Dil Ki Baat",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#130c0e",
+  "theme_color": "#130c0e",
+  "icons": [{ "src": "/dil-ki-baat-logo.png", "sizes": "1080x1080", "type": "image/png" }]
+}

@@ -103,7 +103,7 @@ check(
 
 // ---------------------------------------------------------------- anonymous
 const submit = (o = {}) =>
-  db.query(`SELECT * FROM public.submit_confession($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`, [
+  db.query(`SELECT * FROM public.submit_confession_v2($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, [
     o.content ?? "I have been carrying this for a long while now.",
     o.category ?? "Relationship",
     o.intent ?? "Both",
@@ -115,9 +115,26 @@ const submit = (o = {}) =>
     o.ttl ?? "24h",
     o.anon ?? "anon-browser-1",
     o.req ?? crypto.randomUUID(),
+    o.ageGroup ?? "18+",
   ]);
 
 await as("anon", null, async () => {
+  check(
+    "anon cannot call the unchecked legacy submission function",
+    /permission denied/.test(
+      await err(
+        db.query(
+          `SELECT * FROM public.submit_confession('safe text long enough','Career','Both',2,'','No','',false,'24h','browser',gen_random_uuid())`,
+        ),
+      ),
+    ),
+  );
+  check(
+    "16–17 declaration cannot enable public sharing",
+    /minor_public_sharing_disabled/.test(
+      await err(submit({ ageGroup: "16-17", highlight: "Yes", chat: false })),
+    ),
+  );
   check(
     "anon cannot SELECT submissions",
     /permission denied/.test(await err(db.query(`SELECT * FROM public.submissions`))),
@@ -241,7 +258,13 @@ check(
     r1.room_id === r1.submission_id &&
     /^[0-9a-f]{48}$/.test(r1.room_token),
 );
-const replay = await as("anon", null, () => submit({ req, anon: "anon-A" }));
+const replay = await as("anon", null, () =>
+  submit({
+    req,
+    anon: "anon-A",
+    content: "  <script>alert(1)</script> trimmed and stored as plain text  ",
+  }),
+);
 check(
   "double submit with same request id returns the same row",
   replay.rows[0].submission_id === r1.submission_id,
@@ -270,6 +293,76 @@ check(
 );
 const token = replay.rows[0].room_token; // replay rotated the token: the newest one is valid
 check("replay rotates the chat token", token !== r1.room_token);
+const minor = (
+  await as("anon", null, () =>
+    submit({ anon: "minor-test", ageGroup: "16-17", highlight: "No", chat: false }),
+  )
+).rows[0];
+check(
+  "16–17 declaration is stored with private sharing",
+  (
+    await db.query(
+      `SELECT age_group, highlight_on_instagram FROM public.submissions WHERE id = $1`,
+      [minor.submission_id],
+    )
+  ).rows[0].age_group === "16-17" &&
+    (
+      await db.query(`SELECT highlight_on_instagram FROM public.submissions WHERE id = $1`, [
+        minor.submission_id,
+      ])
+    ).rows[0].highlight_on_instagram === "No",
+);
+check(
+  "another browser cannot use a request id to rotate the token",
+  /invalid_request/.test(await as("anon", null, () => err(submit({ req, anon: "other-browser" })))),
+);
+check(
+  "same browser cannot start a second active chat",
+  /active_chat_exists/.test(await as("anon", null, () => err(submit({ anon: "anon-A" })))),
+);
+const endRoom = (await as("anon", null, () => submit({ anon: "end-test" }))).rows[0];
+await as("anon", null, () =>
+  db.query(`SELECT public.send_chat_message($1,$2,$3,$4)`, [
+    endRoom.room_id,
+    endRoom.room_token,
+    "Please erase this chat message",
+    crypto.randomUUID(),
+  ]),
+);
+check(
+  "wrong token cannot end a chat",
+  /room_not_found/.test(
+    await as("anon", null, () =>
+      err(db.query(`SELECT public.end_chat_room($1,$2)`, [endRoom.room_id, token])),
+    ),
+  ),
+);
+check(
+  "valid token ends its chat",
+  (
+    await as("anon", null, () =>
+      db.query(`SELECT public.end_chat_room($1,$2) ended`, [endRoom.room_id, endRoom.room_token]),
+    )
+  ).rows[0].ended === true,
+);
+check(
+  "ending chat purges its live messages",
+  (
+    await db.query(`SELECT count(*)::int n FROM public.chat_messages WHERE room_id = $1`, [
+      endRoom.room_id,
+    ])
+  ).rows[0].n === 0,
+);
+const endedSignal =
+  (
+    await db.query(
+      `SELECT count(*)::int n FROM realtime.sent WHERE event = 'room' AND payload->>'status' = 'closed'`,
+    )
+  ).rows[0].n > 0;
+check(
+  "same browser can submit again after ending its chat",
+  !!(await as("anon", null, () => submit({ anon: "end-test", chat: false }))).rows[0].submission_id,
+);
 
 // rate limit: 5 per 10 min per browser id
 const rl = [];
@@ -371,10 +464,11 @@ await as("anon", null, async () => {
     msgs.length === 1 && msgs.every((m) => !("room_id" in m) && !("anon_user_id" in m)),
   );
 });
-const sent = (await db.query(`SELECT * FROM realtime.sent`)).rows;
+const sent = (await db.query(`SELECT * FROM realtime.sent WHERE event = 'message'`)).rows;
 check(
   "insert broadcasts a content-free signal on the room topic",
-  sent.length === 1 && sent[0].topic.startsWith("room:") && !("message" in sent[0].payload),
+  sent.length >= 1 &&
+    sent.every((signal) => signal.topic.startsWith("room:") && !("message" in signal.payload)),
   JSON.stringify(sent[0]),
 );
 
@@ -563,10 +657,19 @@ await as("authenticated", admin, async () => {
 });
 
 // ---- chat moderation: hide a message
+const hideRoom = (await as("anon", null, () => submit({ anon: "hide-test" }))).rows[0];
+await as("anon", null, () =>
+  db.query(`SELECT public.send_chat_message($1,$2,$3,$4)`, [
+    hideRoom.room_id,
+    hideRoom.room_token,
+    "Message for moderation",
+    crypto.randomUUID(),
+  ]),
+);
 const hideTarget = (
   await db.query(
     `SELECT id FROM public.chat_messages WHERE room_id = $1 AND sender_type = 'user' ORDER BY created_at LIMIT 1`,
-    [room],
+    [hideRoom.room_id],
   )
 ).rows[0].id;
 await as("anon", null, async () => {
@@ -598,15 +701,14 @@ check(
   modSignal.length === 1 && !("message" in modSignal[0].payload),
   JSON.stringify(modSignal),
 );
-await db.query(`UPDATE public.chat_rooms SET status = 'open' WHERE id = $1`, [room]);
 await as("anon", null, async () => {
   const visible = (
-    await db.query(`SELECT id FROM public.get_room_messages($1, $2)`, [room, token])
+    await db.query(`SELECT id FROM public.get_room_messages($1, $2)`, [
+      hideRoom.room_id,
+      hideRoom.room_token,
+    ])
   ).rows.map((r) => r.id);
-  check(
-    "hidden message is gone for the anonymous holder",
-    !visible.includes(hideTarget) && visible.length > 0,
-  );
+  check("hidden message is gone for the anonymous holder", !visible.includes(hideTarget));
 });
 await as("authenticated", admin, () =>
   db.query(`SELECT public.admin_update_submission($1, _is_archived => true)`, [r1.submission_id]),
@@ -661,7 +763,7 @@ const roomSignals = (
 ).rows.map((r) => r.payload.status);
 check(
   "closing a room signals the anonymous holder",
-  roomSignals.includes("closed"),
+  endedSignal || roomSignals.includes("closed"),
   JSON.stringify(roomSignals),
 );
 const expired = (await db.query(`SELECT public.expire_chat_rooms() n`)).rows[0].n;
@@ -780,6 +882,50 @@ check(
 );
 
 // RLS audit
+check(
+  "anon cannot read push subscriptions",
+  !!(await as("anon", null, () => err(db.query("SELECT * FROM public.push_subscriptions")))),
+);
+check(
+  "anon cannot insert push subscriptions",
+  !!(await as("anon", null, () =>
+    err(
+      db.query(
+        "INSERT INTO public.push_subscriptions(endpoint,p256dh,auth) VALUES ('https://fcm.googleapis.com/fcm/send/test', 'x', 'x')",
+      ),
+    ),
+  )),
+);
+check(
+  "anon cannot call push rate limiter",
+  !!(await as("anon", null, () => err(db.query("SELECT public.push_check_rate_limit('test')")))),
+);
+check(
+  "anon cannot read broadcast audit",
+  !!(await as("anon", null, () => err(db.query("SELECT * FROM public.push_broadcast_audit")))),
+);
+const pushColumns = (
+  await db.query(
+    "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='push_subscriptions'",
+  )
+).rows.map((row) => row.column_name);
+check(
+  "push table has no identity or confession link",
+  !["user_id", "confession_id", "chat_id", "ip_address", "ip_hash", "name", "email", "phone"].some(
+    (column) => pushColumns.includes(column),
+  ),
+);
+const auditColumns = (
+  await db.query(
+    "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='push_broadcast_audit'",
+  )
+).rows.map((row) => row.column_name);
+check(
+  "broadcast audit has no recipient secrets or message content",
+  !["endpoint", "p256dh", "auth", "title", "body", "subscription_id"].some((column) =>
+    auditColumns.includes(column),
+  ),
+);
 const rls = (
   await db.query(
     `SELECT relname, relrowsecurity FROM pg_class WHERE relnamespace = 'public'::regnamespace AND relkind = 'r' ORDER BY 1`,

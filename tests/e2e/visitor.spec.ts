@@ -1,12 +1,17 @@
 import { expect, test, type Page } from "@playwright/test";
 import { hydrated, mockSupabase } from "./support/supabase";
 
+test.use({ reducedMotion: "reduce" });
+
 async function openForm(page: Page) {
-  await page.goto("/");
+  // Film behavior is covered separately. Keep interaction tests still so the
+  // long background animation does not consume the test machine's GPU.
+  await page.goto("/?film=blocked");
   await hydrated(page, "#release textarea");
 }
 
 async function fillEverything(page: Page) {
+  await page.getByRole("button", { name: "I am 18 or older" }).click();
   await page
     .getByLabel("What is on your mind?")
     .fill("I have been pretending to be okay at work for months.\nIt is wearing me down.");
@@ -31,10 +36,8 @@ test.describe("visitor journey", () => {
     await openForm(page);
     await fillEverything(page);
     await page.getByRole("button", { name: /let it go/i }).dblclick();
-    await expect(
-      page.getByRole("heading", { name: /your words have been received/i }),
-    ).toBeVisible();
-    const submits = calls.filter((c) => c.fn === "submit_confession");
+    await expect(page.getByRole("heading", { name: /your chat is here/i })).toBeVisible();
+    const submits = calls.filter((c) => c.fn === "submit_confession_v2");
     expect(submits).toHaveLength(1);
     expect(submits[0].body).toMatchObject({
       _content: "I have been pretending to be okay at work for months.\nIt is wearing me down.",
@@ -44,6 +47,7 @@ test.describe("visitor journey", () => {
       _nickname: "Tired Owl",
       _community_question: "Should I talk to my manager?",
       _chat_enabled: true,
+      _age_group: "18+",
     });
   });
 
@@ -61,37 +65,37 @@ test.describe("visitor journey", () => {
     await expect(alert).not.toContainText(/postgrest|boom/i);
     await expect(page.getByLabel("A name that is not yours")).toHaveValue("Tired Owl");
     await page.getByRole("button", { name: /let it go/i }).click();
-    await expect(
-      page.getByRole("heading", { name: /your words have been received/i }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: /your chat is here/i })).toBeVisible();
     const ids = calls
-      .filter((c) => c.fn === "submit_confession")
+      .filter((c) => c.fn === "submit_confession_v2")
       .map((c) => c.body._client_request_id);
     expect(ids).toHaveLength(2);
     expect(ids[0]).toBe(ids[1]);
   });
 
-  test("chat: desktop opens the panel; phones offer 'Your chat' instead of covering the confirmation", async ({
-    page,
-  }, info) => {
+  test("chat replaces the form and can be reopened after refresh", async ({ page }) => {
     await mockSupabase(page);
     await openForm(page);
     await fillEverything(page);
     await page.getByRole("button", { name: /let it go/i }).click();
-    await expect(
-      page.getByRole("heading", { name: /your words have been received/i }),
-    ).toBeVisible();
-    const panel = page.getByRole("region", { name: "Anonymous chat" });
-    if (info.project.name === "mobile") {
-      await expect(panel).toHaveCount(0);
-      await page.getByRole("button", { name: /your chat/i }).click();
-    }
+    await expect(page.getByRole("heading", { name: /your chat is here/i })).toBeVisible();
+    await expect(page.getByLabel("What is on your mind?")).toHaveCount(0);
+    const panel = page.getByRole("region", { name: "Your active chat" });
     await expect(panel).toBeVisible();
     await expect(panel).toContainText("I'm here. Take your time.");
+    await page.reload();
+    await expect(page.getByRole("heading", { name: /your chat is here/i })).toBeVisible();
     await panel.getByLabel("Message", { exact: true }).fill("  <b>hello</b>  ");
     await panel.getByLabel("Message", { exact: true }).press("Enter");
     await expect(panel).toContainText("<b>hello</b>");
     await expect(panel.locator("b")).toHaveCount(0);
+    await page.getByRole("button", { name: "End chat" }).click();
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "End chat and delete messages" })
+      .click();
+    await expect(page.getByLabel("What is on your mind?")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /your chat is here/i })).toHaveCount(0);
   });
 
   test("crisis help always opens above the chat", async ({ page }) => {
@@ -99,9 +103,7 @@ test.describe("visitor journey", () => {
     await openForm(page);
     await fillEverything(page);
     await page.getByRole("button", { name: /let it go/i }).click();
-    await expect(
-      page.getByRole("heading", { name: /your words have been received/i }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: /your chat is here/i })).toBeVisible();
     await page.getByRole("button", { name: /get help/i }).click();
     const dialog = page.getByRole("dialog");
     await expect(dialog).toContainText("14416");

@@ -106,7 +106,8 @@ export function ChatThread({
               </p>
               <p className="mt-1 text-sm text-muted-foreground">Start the conversation.</p>
               <p className="mt-3 text-xs leading-relaxed text-muted-foreground/80">
-                A mentor will join shortly. Nothing here is tied to your identity.
+                A mentor may reply here. Please keep real names and contact details out of your
+                messages.
               </p>
             </div>
           )}

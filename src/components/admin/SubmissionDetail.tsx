@@ -197,6 +197,7 @@ export function SubmissionDetail({
               <Badge variant="outline" className={STATUS_TONE[s.status]}>
                 {s.status}
               </Badge>
+              {s.age_group === "16-17" && <Badge variant="secondary">16–17 · keep private</Badge>}
               {s.is_featured && (
                 <Badge variant="outline" className="border-primary/50 text-primary">
                   <Star className="mr-1 size-3 fill-primary" aria-hidden="true" /> Featured
@@ -208,6 +209,7 @@ export function SubmissionDetail({
 
             <dl>
               <Row label="Date">{new Date(s.created_at).toLocaleString()}</Row>
+              <Row label="Declared age">{s.age_group ?? "Not recorded"}</Row>
               <Row label="Category">{s.category}</Row>
               <Row label="Type">{INTENTS.find((i) => i.value === s.intent)?.label ?? s.intent}</Row>
               <Row label="Emotional state">

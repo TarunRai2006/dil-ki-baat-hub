@@ -122,6 +122,64 @@ Expiry is also enforced on every read and write, so it holds either way.
   to read the conversation, see **What they wrote**, reply (or use a quick
   reply), hide a message, close the chat, or jump to **View submission**.
   Everything is realtime in both directions.
+- **Push Notifications** tab: aggregate subscriber count and an admin-only
+  broadcast composer. Confirm the title, message, destination and approximate
+  recipient count before sending. Delivery is best effort.
+
+## Returning to an anonymous chat
+
+An active chat is restored from a secret kept in the visitor's browser storage.
+After a refresh or reopening the site in the same browser profile and origin,
+use the prominent **Continue your chat** button above the form. The default
+chat lifetime is 24 hours; the selected expiry and the server decide when it
+ends. The form appearing again does not remove an active chat.
+
+There is no account or cross-device recovery. Changing browser profiles or
+switching between `localhost` and `127.0.0.1` uses different storage. Clearing
+site data or using a private window loses the chat access secret.
+
+## Browser push setup and manual test
+
+1. Generate one VAPID pair with `npx web-push generate-vapid-keys`. Keep the
+   private key out of Git and browser variables. Configure
+   `VITE_VAPID_PUBLIC_KEY` at build time and `VAPID_PUBLIC_KEY` at server runtime
+   with the same public value. Configure `VAPID_PRIVATE_KEY` and
+   `VAPID_SUBJECT=mailto:your-admin-contact@example.com` as server secrets.
+2. Configure `SUPABASE_SERVICE_ROLE_KEY` and a random 32-byte-or-longer
+   `PUSH_RATE_LIMIT_SECRET` as **server-only** secrets. The service key bypasses
+   RLS, so restrict it to the server runtime. For local PowerShell testing,
+   set these in the shell that starts `npm run dev`; do not prefix them `VITE_`.
+   `VITE_VAPID_PUBLIC_KEY` may go in the local Vite env file. Restart/rebuild
+   after changing build-time env vars. Set the same secrets in the deployment
+   provider before testing a deployed build.
+3. Apply `supabase/migrations/20261012120000_push_subscriptions.sql` with
+   `npx supabase db push` against the intended project. The migration creates
+   a service-role-only subscription table and an independent abuse-rate bucket.
+4. Serve the app on HTTPS or `localhost`. In a fresh Chrome/Edge/Firefox
+   profile, fill the form and press **Let it go**. Choose **Allow**. Confirm
+   the confession success view and a row in `push_subscriptions` in Supabase
+   Studio. The subscription row contains endpoint and encryption keys only;
+   do not copy those values into screenshots or support messages.
+5. Sign in to `/admin`, open **Push Notifications**, enter a short message,
+   use `/` as the destination path, confirm the broadcast, and verify the
+   OS/browser notification. **Refresh count** must show at least one active
+   subscription before sending; zero means there are no recipients. Click it:
+   the site should open or focus. Repeat with the site tab closed while keeping
+   the browser running. Delivery after browser/device restart depends on the
+   platform and is not guaranteed.
+6. In another fresh browser profile, choose **Block** on the form prompt.
+   The confession must still succeed and no subscription row should be added.
+   Submit again in the allowed profile: no second permission prompt and no
+   duplicate endpoint row. If the browser lacks Push API support, the form
+   still works. Browser site settings can reset permission for repeat testing.
+   On iPhone or iPad, add the site to the Home Screen, open that installed app,
+   and submit there; ordinary Safari tabs cannot subscribe to iOS Web Push.
+
+Push subscriptions are independent of submissions, chats, accounts and IPs.
+No notification open tracking is collected. A broadcast removes endpoints only
+when the push service returns 404 or 410; temporary failures remain subscribed.
+The server records an aggregate admin broadcast audit (admin ID, time and
+delivery counts) without recipient identifiers or message content.
 
 ---
 

@@ -18,11 +18,11 @@ export function SiteFooter() {
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted-foreground">
               Dil Ki Baat is a community initiative by{" "}
               <span className="text-cream/80">aapkamentor.ai</span>, built by people who got tired
-              of pretending they were fine. Real humans read every word.
+              of pretending they were fine. Mentors can review the stories shared here.
             </p>
             <p className="mt-5 inline-flex items-center gap-2 text-xs text-muted-foreground">
               <ShieldCheck className="size-4 text-primary" aria-hidden="true" />
-              Anonymous by design. No accounts, no tracking of who you are.
+              No account is required. This browser stores a private chat key so you can return.
             </p>
           </div>
 
@@ -55,8 +55,7 @@ export function SiteFooter() {
               </li>
             </ul>
             <p className="mt-4 text-xs leading-relaxed text-muted-foreground/80">
-              Slide into the DMs if writing feels like too much today. We usually reply within a
-              day.
+              You can also contact us on Instagram. Replies may take time.
             </p>
           </div>
 
@@ -70,7 +69,7 @@ export function SiteFooter() {
                   to="/terms"
                   className="underline decoration-primary/30 underline-offset-4 transition-colors hover:text-cream hover:decoration-primary"
                 >
-                  Disclaimer &amp; Terms of Service
+                  Terms and Privacy
                 </Link>
               </li>
               <li>

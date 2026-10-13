@@ -17,17 +17,21 @@ test.describe("background film", () => {
     await mockSupabase(page);
   });
 
-  test("the form, poster and muted looping video are all in the server HTML", async ({
+  test("the poster and muted looping video ship in HTML while chat storage is checked", async ({
     request,
+    page,
   }) => {
     const html = await (await request.get("/")).text();
     expect(html).toMatch(/<img[^>]+src="\/media\/intro-poster\.webp"/);
     const video = html.match(/<video[^>]*>/)![0];
     for (const attr of [/muted/, /autoPlay|autoplay/, /loop/, /playsInline|playsinline/])
       expect(video).toMatch(attr);
-    // nothing to wait for: the form ships with the first paint
+    // The server cannot inspect this browser's private room key. Hold the form
+    // until hydration checks storage so it cannot flash over an active chat.
     expect(html).toMatch(/<main[^>]+id="release"/);
-    expect(html).toMatch(/<textarea/);
+    expect(html).toContain("Checking for your chat");
+    await page.goto("/");
+    await hydrated(page, "#release textarea");
   });
 
   test("film plays behind the form, covers the viewport, and never takes input", async ({

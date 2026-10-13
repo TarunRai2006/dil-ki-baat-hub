@@ -52,7 +52,7 @@ export const DEFAULT_FILTERS: SubmissionFilters = {
  */
 const LIST_COLUMNS =
   "id, created_at, updated_at, content, category, intent, emotional_state, highlight_on_instagram, nickname, alias, chat_enabled, status, is_featured, is_archived, deleted_at";
-const DETAIL_COLUMNS = `${LIST_COLUMNS}, community_question, chat_ttl, admin_notes, reviewed_at, reviewed_by`;
+const DETAIL_COLUMNS = `${LIST_COLUMNS}, age_group, community_question, chat_ttl, admin_notes, reviewed_at, reviewed_by`;
 
 export type AdminSubmission = Omit<
   Confession,

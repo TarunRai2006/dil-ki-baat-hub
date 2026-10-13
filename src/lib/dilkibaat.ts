@@ -140,10 +140,16 @@ const ANON_KEY = "dkb_anon_user_id";
 
 export function getAnonUserId(): string {
   if (typeof window === "undefined") return "";
-  let id = window.localStorage.getItem(ANON_KEY);
-  if (!id) {
-    id = crypto.randomUUID();
-    window.localStorage.setItem(ANON_KEY, id);
+  try {
+    let id = window.localStorage.getItem(ANON_KEY);
+    if (!id) {
+      id = crypto.randomUUID();
+      window.localStorage.setItem(ANON_KEY, id);
+    }
+    return id;
+  } catch {
+    // Submitting still works when browser storage is blocked, but this visitor
+    // cannot reopen a room after leaving the page.
+    return crypto.randomUUID();
   }
-  return id;
 }

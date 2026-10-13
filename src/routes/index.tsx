@@ -2,15 +2,21 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { AnimatePresence, MotionConfig, motion } from "framer-motion";
-import { Heart, MessageCircle } from "lucide-react";
 import { SmoothScroll } from "@/components/SmoothScroll";
 import { HelpModal } from "@/components/HelpModal";
 import { AudioToggle } from "@/components/AudioToggle";
 import { BackgroundFilm } from "@/components/BackgroundFilm";
 import { SiteFooter } from "@/components/SiteFooter";
 import { ReleaseForm } from "@/components/city/ReleaseForm";
-import { ChatWidget } from "@/components/ChatWidget";
-import { fetchWhispers, forgetRoom, latestLiveRoom, type StoredRoom } from "@/lib/confession";
+import { ActiveChatView } from "@/components/city/ActiveChatView";
+import {
+  fetchWhispers,
+  forgetRoom,
+  latestLiveRoom,
+  ROOMS_KEY,
+  type StoredRoom,
+} from "@/lib/confession";
+import { subscribeToPush, type PushOptInStatus } from "@/lib/push-client";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -28,7 +34,9 @@ export const Route = createFileRoute("/")({
           "Behind every lit window is something unsaid. Read them, then release yours — no name, no account.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:image", content: "/dil-ki-baat-logo.png" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: "/dil-ki-baat-logo.png" },
     ],
   }),
   component: City,
@@ -43,8 +51,10 @@ function City() {
   // the ticker only ever shows real words: the visitor's own release, and
   // confessions their writers agreed to share that a mentor approved + featured
   const [mine, setMine] = useState<string[]>([]);
-  const [room, setRoom] = useState<StoredRoom | null>(null);
-  const [chatOpen, setChatOpen] = useState(false);
+  // undefined means browser storage has not been checked yet. Never flash the
+  // form over an existing anonymous room during hydration.
+  const [room, setRoom] = useState<StoredRoom | null | undefined>(undefined);
+  const [pushStatus, setPushStatus] = useState<PushOptInStatus | null>(null);
 
   const whispers = useQuery({
     queryKey: ["public-whispers"],
@@ -56,6 +66,16 @@ function City() {
   // someone returning can reopen a chat that is still live (stored on this device only)
   useEffect(() => {
     setRoom((current) => current ?? latestLiveRoom());
+    const syncRoom = (event: StorageEvent) => {
+      if (event.key === ROOMS_KEY || event.key === null) setRoom(latestLiveRoom());
+    };
+    window.addEventListener("storage", syncRoom);
+    // Reconcile an already granted browser subscription on a later visit.
+    // This never prompts visitors who have not opted in.
+    if ("Notification" in window && Notification.permission === "granted") {
+      void subscribeToPush();
+    }
+    return () => window.removeEventListener("storage", syncRoom);
   }, []);
 
   return (
@@ -68,9 +88,11 @@ function City() {
         <header className="fixed inset-x-0 top-0 z-50 bg-gradient-to-b from-background via-background/75 to-transparent px-6 pb-8 pt-[max(1rem,env(safe-area-inset-top))] sm:px-10 sm:pb-10 sm:pt-[max(1.5rem,env(safe-area-inset-top))]">
           <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2.5">
-              <span className="grid size-8 place-items-center rounded-full border border-primary/30">
-                <Heart className="size-3.5 fill-primary/70 text-primary" />
-              </span>
+              <img
+                src="/dil-ki-baat-logo.png"
+                alt=""
+                className="size-10 shrink-0 rounded-lg border border-primary/30 object-cover"
+              />
               <span className="flex min-w-0 flex-col leading-none">
                 <span className="truncate font-display text-base tracking-tight text-cream">
                   Dil Ki Baat
@@ -87,51 +109,43 @@ function City() {
           </div>
         </header>
 
-        {/* the release form, in front of the film from the first paint */}
+        {/* A live room owns this space. The form returns after it ends. */}
         <main
           id="release"
-          aria-label="Release your thought anonymously"
+          aria-label={room ? "Your anonymous chat" : "Release your thought anonymously"}
           className="relative z-40 flex min-h-svh items-start justify-center px-4 pb-20 pt-24 sm:items-center sm:pt-28"
         >
-          <ReleaseForm
-            onReleased={(text, newRoom) => {
-              setMine((f) => [`You let go of: “${text.slice(0, 90)}”`, ...f].slice(0, 3));
-              if (newRoom) {
-                setRoom(newRoom);
-                // on phones the panel would cover the confirmation; the
-                // "Your chat" button opens it when the visitor is ready
-                setChatOpen(window.matchMedia("(min-width: 640px)").matches);
-              }
-            }}
-          />
+          {room === undefined ? (
+            <div
+              className="release-glass mx-auto w-full max-w-2xl p-8 text-center text-sm text-muted-foreground"
+              role="status"
+            >
+              Checking for your chat…
+            </div>
+          ) : room ? (
+            <ActiveChatView
+              room={room}
+              pushStatus={pushStatus}
+              onPushStatus={setPushStatus}
+              onEnded={() => {
+                forgetRoom(room.roomId);
+                setRoom(latestLiveRoom());
+              }}
+            />
+          ) : (
+            <ReleaseForm
+              onPushStatus={setPushStatus}
+              onReleased={(text, newRoom) => {
+                setMine((f) => [`You let go of: “${text.slice(0, 90)}”`, ...f].slice(0, 3));
+                if (newRoom) setRoom(newRoom);
+              }}
+            />
+          )}
         </main>
 
         <div className="relative z-40">
           <SiteFooter />
         </div>
-
-        {/* the anonymous chat, or a way back to it */}
-        {room && chatOpen && (
-          <ChatWidget
-            room={room}
-            onClose={() => setChatOpen(false)}
-            onEnded={() => {
-              forgetRoom(room.roomId);
-              setRoom(null);
-              setChatOpen(false);
-            }}
-          />
-        )}
-        {room && !chatOpen && (
-          <button
-            type="button"
-            onClick={() => setChatOpen(true)}
-            className="fixed bottom-14 right-3 z-[45] inline-flex items-center gap-2 rounded-full border border-primary/40 bg-background/70 px-4 py-2.5 font-mono text-[0.6rem] uppercase tracking-[0.2em] text-primary shadow-lg backdrop-blur-md transition-colors hover:border-primary hover:text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:right-5"
-          >
-            <MessageCircle className="size-4" aria-hidden="true" />
-            Your chat
-          </button>
-        )}
 
         {/* whispers ticker: real, consented words only; absent when there are none */}
         <AnimatePresence>

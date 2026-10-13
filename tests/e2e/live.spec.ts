@@ -34,7 +34,7 @@ test.describe("@live full stack", () => {
     return c;
   };
   const newPage = async (browser: Browser) => (await browser.newContext()).newPage();
-  const chat = (p: Page) => p.getByRole("region", { name: "Anonymous chat" });
+  const chat = (p: Page) => p.getByRole("region", { name: "Your active chat" });
 
   test.beforeAll(async ({ browser }) => {
     service = createClient(URL_!, SECRET!, { auth: { persistSession: false } });
@@ -69,6 +69,7 @@ test.describe("@live full stack", () => {
   test("visitor submits; exactly one row is stored with every field", async () => {
     await visitor.goto("/");
     await hydrated(visitor, "#release textarea");
+    await visitor.getByRole("button", { name: "I am 18 or older" }).click();
     await visitor
       .getByLabel("What is on your mind?")
       .fill(`Live ${stamp}: pretending to be okay.\nIt is wearing me down.`);
@@ -78,9 +79,7 @@ test.describe("@live full stack", () => {
     await visitor.getByRole("button", { name: "Disappear in 1 hour" }).click();
     await visitor.getByLabel("A name that is not yours").fill(`Owl ${stamp}`);
     await visitor.getByRole("button", { name: /let it go/i }).dblclick();
-    await expect(
-      visitor.getByRole("heading", { name: /your words have been received/i }),
-    ).toBeVisible();
+    await expect(visitor.getByRole("heading", { name: /your chat is here/i })).toBeVisible();
 
     const { data } = await service
       .from("submissions")
@@ -93,6 +92,7 @@ test.describe("@live full stack", () => {
       highlight_on_instagram: "Yes",
       nickname: `Owl ${stamp}`,
       chat_ttl: "1h",
+      age_group: "18+",
       status: "Pending",
     });
     subId = data![0].id;

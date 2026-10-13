@@ -120,7 +120,11 @@ const FRIENDLY: Record<string, string> = {
   invalid_highlight: "Please choose whether we can share it.",
   invalid_nickname: `Nicknames can be up to ${NICKNAME_MAX} characters.`,
   invalid_chat: "Please choose how long the chat should last.",
+  invalid_age_group: "Please confirm that you are at least 16.",
+  minor_public_sharing_disabled: "Public sharing is off for visitors aged 16–17.",
   invalid_request: "Something about that request was off. Please refresh and try again.",
+  active_chat_exists:
+    "You already have an active chat on this browser. Open it before starting another story.",
   message_empty: "Write something first.",
   message_too_long: `Messages can be up to ${MESSAGE_MAX} characters.`,
   room_expired: "This chat has ended. It disappeared as promised.",
@@ -179,10 +183,11 @@ export type SubmitResult = {
 export async function submitConfession(
   input: ConfessionInput,
   requestId: string,
+  ageGroup: "16-17" | "18+",
 ): Promise<SubmitResult> {
   const data = confessionSchema.parse(input);
   const { data: rows, error } = await supabase
-    .rpc("submit_confession", {
+    .rpc("submit_confession_v2", {
       _content: data.content,
       _category: data.category,
       _intent: data.intent,
@@ -194,6 +199,7 @@ export async function submitConfession(
       _chat_ttl: data.chat_ttl,
       _anon_user_id: getAnonUserId(),
       _client_request_id: requestId,
+      _age_group: ageGroup,
     })
     .abortSignal(timeoutSignal(15_000));
   if (error) throw error;
@@ -210,6 +216,7 @@ export async function submitConfession(
     };
     saveRoom(room);
   }
+  if (data.chat_enabled && !room) throw new Error("invalid_request");
   return { submissionId: row.submission_id, alias: row.alias, room };
 }
 
@@ -223,7 +230,7 @@ export type StoredRoom = {
   expiresAt: string | null;
 };
 
-const ROOMS_KEY = "dkb_chat_rooms";
+export const ROOMS_KEY = "dkb_chat_rooms";
 
 function readRooms(): StoredRoom[] {
   if (typeof window === "undefined") return [];
@@ -262,6 +269,15 @@ export function forgetRoom(roomId: string) {
   } catch {
     // ignore
   }
+}
+
+/** End a room on the server before removing its access token from this browser. */
+export async function endChatRoom(room: StoredRoom): Promise<void> {
+  const { error } = await supabase
+    .rpc("end_chat_room", { _room_id: room.roomId, _token: room.token })
+    .abortSignal(timeoutSignal(12_000));
+  if (error) throw error;
+  forgetRoom(room.roomId);
 }
 
 /** Most recent room that has not passed its expiry (the server still decides). */
