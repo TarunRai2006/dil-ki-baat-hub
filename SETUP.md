@@ -5,14 +5,24 @@ matters is in `supabase/migrations/`: tables, row-level security, the
 functions the site calls, realtime, chat expiry. Any Supabase project that has
 those migrations applied works.
 
-The app is connected to the hosted project **`iytqunvpnubbttppoepe`**
-(`.env`), with all migrations applied. `npm run dev` uses it.
+The app needs a reachable Supabase project. `npm run dev` uses the URL and
+publishable key from your local environment file; starting Vite alone does not
+start the database. See `.env.example` for the required variables. The project
+ID in `supabase/config.toml` identifies a project, but does not supply a
+working URL or key to the browser.
 
 There are two ways to run it:
 
 - **A. Against a local Supabase in Docker** (`npm run dev:docker`): a private
   sandbox with sample data, for development and tests
-- **B. Against the hosted project** (`npm run dev`, and the real site)
+- **B. Against a hosted project** (`npm run dev`, and the real site)
+
+If a chat says it cannot reach the server, check the configured
+`VITE_SUPABASE_URL` and make sure Supabase is running there. A page loaded by
+Vite can still display a saved chat from this browser even while the database
+is offline. End chat requires a successful server request to delete messages;
+when that request fails, keep this browser's data and retry after restoring
+the backend. Do not clear site storage as a workaround.
 
 ---
 
@@ -37,10 +47,10 @@ SUPABASE_URL="http://127.0.0.1:54321"
 SUPABASE_PUBLISHABLE_KEY="<same key>"
 ```
 
-Create a mentor (admin) login. The script only works against localhost:
+Create a counsellor or therapist admin login. The script only works against localhost:
 
 ```sh
-SUPABASE_SECRET_KEY="<SECRET_KEY from supabase status>" ADMIN_EMAIL="mentor@local.test" ADMIN_PASSWORD="<choose one>" npm run seed:admin
+SUPABASE_SECRET_KEY="<SECRET_KEY from supabase status>" ADMIN_EMAIL="care@local.test" ADMIN_PASSWORD="<choose one>" npm run seed:admin
 ```
 
 Then `npm run dev:docker` and open:
@@ -48,7 +58,7 @@ Then `npm run dev:docker` and open:
 | URL                         | What                                              |
 | --------------------------- | ------------------------------------------------- |
 | http://localhost:8080/      | the site: film in the background, the form on top |
-| http://localhost:8080/auth  | mentor sign-in                                    |
+| http://localhost:8080/auth  | counsellor or therapist sign-in                   |
 | http://localhost:8080/admin | dashboard: submissions, **Chats**, stats          |
 | http://127.0.0.1:54323      | Supabase Studio: browse the tables directly       |
 
@@ -92,7 +102,7 @@ Restart the dev server after changing any env file. Never create a plain
    These keys are public by design: every permission is enforced in the
    database. **Never** put the secret / service_role key in `.env` or anywhere
    in the frontend. Set the same variables in your hosting provider.
-4. Create your mentor login: **Authentication → Users → Add user** (email +
+4. Create your counsellor or therapist login: **Authentication → Users → Add user** (email +
    password, tick _Auto Confirm User_), copy the new user's UID, then in the
    **SQL Editor** run:
    ```sql
@@ -131,8 +141,14 @@ Expiry is also enforced on every read and write, so it holds either way.
 An active chat is restored from a secret kept in the visitor's browser storage.
 After a refresh or reopening the site in the same browser profile and origin,
 the chat appears automatically and the form stays hidden. The visitor can use
-**End chat** to close it and return to the form. The default chat lifetime is
-24 hours; the selected expiry and the server decide when it ends.
+**End chat** to close it, delete its live messages and return to the form.
+Choosing **I want advice** reveals one-hour, 24-hour, and no-expiry choices;
+no expiry is the default. Choosing **I want to be heard** creates a chat without
+an expiry choice. The form also includes three written prompts, an optional
+topic and feeling rating. The previous private-question and nickname fields
+are no longer shown to new visitors.
+The original story is retained separately for moderation, as described in the
+Terms of Service and Privacy Policy.
 
 There is no account or cross-device recovery. Changing browser profiles or
 switching between `localhost` and `127.0.0.1` uses different storage. Clearing
@@ -157,7 +173,8 @@ site data or using a private window loses the chat access secret.
    push migration creates a service-role-only subscription table and an
    independent abuse-rate bucket.
 4. Serve the app on HTTPS, `localhost`, or `127.0.0.1`. In a fresh Chrome/Edge/Firefox
-   profile, fill the form and press **Let it go**. Choose **Allow**. Confirm
+   profile, interact with the form and choose **Allow** if the browser asks for
+   notification permission. Fill the form and press **Let it go**. Confirm
    the chat opens and a row appears in `push_subscriptions` in Supabase
    Studio. The subscription row contains endpoint and encryption keys only;
    do not copy those values into screenshots or support messages.

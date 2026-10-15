@@ -32,9 +32,8 @@ export function HelpModal() {
             You are not alone. Help is one call away.
           </DialogTitle>
           <DialogDescription>
-            Dil Ki Baat is a peer support space, not a crisis or medical service. If you are
-            thinking of harming yourself or someone else, please reach a trained professional right
-            now.
+            Dil Ki Baat has counsellors and therapists, but chat replies are not immediate. If you
+            or someone else may be in danger, seek urgent help now.
           </DialogDescription>
         </DialogHeader>
 

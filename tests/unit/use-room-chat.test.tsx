@@ -7,6 +7,7 @@ type Status = "SUBSCRIBED" | "CHANNEL_ERROR" | "TIMED_OUT" | "CLOSED";
 const server = {
   status: "open" as "open" | "closed" | "expired",
   messages: [] as typeof fixtureMessages,
+  failNextOpen: false,
   failNextSend: false,
   rpcCalls: [] as string[],
 };
@@ -16,6 +17,10 @@ const removeChannel = vi.fn();
 
 function answer(fn: string, args: Record<string, unknown>) {
   server.rpcCalls.push(fn);
+  if (fn === "get_chat_room" && server.failNextOpen) {
+    server.failNextOpen = false;
+    return { data: null, error: { message: "Failed to fetch" } };
+  }
   if (fn === "get_chat_room")
     return {
       data: [
@@ -85,6 +90,7 @@ const { useRoomChat } = await import("@/hooks/use-room-chat");
 beforeEach(() => {
   server.status = "open";
   server.messages = fixtureMessages.map((m) => ({ ...m }));
+  server.failNextOpen = false;
   server.failNextSend = false;
   server.rpcCalls = [];
   handlers.clear();
@@ -184,6 +190,23 @@ describe("useRoomChat", () => {
     expect(result.current.state).toBe("reconnecting");
     act(() => subscribeCb!("SUBSCRIBED"));
     expect(result.current.state).toBe("connected");
+  });
+
+  it("reopens and subscribes when the server returns after an initial failure", async () => {
+    server.failNextOpen = true;
+    const { result } = renderHook(() => useRoomChat(room));
+    await waitFor(() => expect(result.current.state).toBe("reconnecting"));
+    expect(subscribeCb).toBeNull();
+
+    act(() => window.dispatchEvent(new Event("online")));
+    await waitFor(() => expect(subscribeCb).not.toBeNull());
+    act(() => subscribeCb!("SUBSCRIBED"));
+    await waitFor(() => expect(result.current.state).toBe("connected"));
+    expect(result.current.lines.map((line) => line.message)).toEqual([
+      "hello, is anyone there?",
+      "I'm here. Take your time.",
+    ]);
+    expect(server.rpcCalls.filter((name) => name === "get_chat_room")).toHaveLength(2);
   });
 
   it("a mentor closing the room ends the chat and tears down realtime", async () => {

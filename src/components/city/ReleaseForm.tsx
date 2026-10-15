@@ -2,35 +2,27 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
-import { Loader2, ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { BrandLoader } from "@/components/BrandLoader";
+import { CrisisContacts } from "@/components/CrisisContacts";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { CATEGORIES, HIGHLIGHT_OPTIONS, INTENTS, MOOD_LABELS, TTL_OPTIONS } from "@/lib/dilkibaat";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  CONTENT_MAX,
-  NICKNAME_MAX,
-  QUESTION_MAX,
+  CONTENT_MIN,
   confessionSchema,
   friendlyError,
   submitConfession,
   type StoredRoom,
 } from "@/lib/confession";
+import { FEELINGS_MAX, STORY_MAX, SUPPORT_MAX, composeStory } from "@/lib/intake";
+import { CATEGORIES, FORM_INTENTS, MOOD_LABELS, TTL_OPTIONS } from "@/lib/dilkibaat";
 import { scrollControls } from "@/lib/scroll-state";
-import { playClick, playRelease } from "@/lib/audio-engine";
-import { subscribeToPush, type PushOptInStatus } from "@/lib/push-client";
+import { playRelease } from "@/lib/audio-engine";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
-
-const PUSH_STATUS_MESSAGE: Record<PushOptInStatus, string> = {
-  enabled: "Browser updates enabled. Alerts appear through your browser or device.",
-  blocked: "Notifications are blocked here. Your words were still submitted.",
-  dismissed: "Notifications were not enabled. Your words were still submitted.",
-  unsupported: "This browser cannot receive push updates. Your words were still submitted.",
-  failed:
-    "Notifications were allowed, but the subscription could not be saved. Your words were still submitted.",
-};
+const ANSWER_CLASS =
+  "resize-none border-cream/12 bg-background/40 text-base text-cream sm:text-sm placeholder:text-muted-foreground/70 focus-visible:ring-primary/40";
 
 /** A numbered, hairline-separated section. Deliberately not a box. */
 function Field({
@@ -78,14 +70,11 @@ function Pill({
     <button
       type="button"
       aria-pressed={active}
-      onClick={() => {
-        playClick(0.6);
-        onClick();
-      }}
-      className={`rounded-full border px-3.5 py-1.5 font-mono text-[0.6rem] uppercase tracking-[0.18em] transition-all duration-300 ${
+      onClick={onClick}
+      className={`min-h-11 rounded-full border px-4 py-2 font-mono text-[0.6rem] uppercase tracking-[0.14em] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
         active
           ? "border-primary/70 bg-primary/15 text-primary"
-          : "border-cream/12 text-muted-foreground hover:border-primary/40 hover:text-primary"
+          : "border-cream/20 text-cream/75 hover:border-primary/50 hover:text-primary"
       }`}
     >
       {children}
@@ -96,24 +85,20 @@ function Pill({
 /** The release panel that floats in once the city has turned crimson. */
 export function ReleaseForm({
   onReleased,
-  onPushStatus,
 }: {
-  onReleased: (text: string, room: StoredRoom | null) => void;
-  onPushStatus: (status: PushOptInStatus | null) => void;
+  onReleased: (text: string, room: StoredRoom | null, intent: "Advice" | "Express") => void;
 }) {
   const [content, setContent] = useState("");
-  const [ageGroup, setAgeGroup] = useState<"16-17" | "18+" | null>(null);
-  const [category, setCategory] = useState<string>("Relationship");
-  const [intent, setIntent] = useState<string>("Both");
-  const [mood, setMood] = useState(2);
-  const [question, setQuestion] = useState("");
-  const [highlight, setHighlight] = useState<string>("No");
-  const [nickname, setNickname] = useState("");
-  const [ttl, setTtl] = useState<string>("24h");
+  const [feelings, setFeelings] = useState("");
+  const [support, setSupport] = useState("");
+  const [category, setCategory] = useState<(typeof CATEGORIES)[number] | null>(null);
+  const [mood, setMood] = useState<number | null>(null);
+  const [intent, setIntent] = useState<"Advice" | "Express" | null>(null);
+  const [ttl, setTtl] = useState<(typeof TTL_OPTIONS)[number]["value"]>("never");
   const [loading, setLoading] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [released, setReleased] = useState(false);
-  const [pushStatus, setPushStatus] = useState<PushOptInStatus | null>(null);
+  const [submittedIntent, setSubmittedIntent] = useState<"Advice" | "Express" | null>(null);
   const successRef = useRef<HTMLHeadingElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const inFlight = useRef(false);
@@ -123,26 +108,28 @@ export function ReleaseForm({
   const requestId = useRef<string>("");
   useEffect(() => {
     requestId.current = crypto.randomUUID();
-  }, [content, category, intent, mood, question, highlight, nickname, ttl]);
+  }, [content, feelings, support, category, mood, intent, ttl]);
 
   const submit = async () => {
     if (inFlight.current) return;
-    if (!ageGroup) {
-      const message = "Please confirm that you are at least 16 before submitting.";
+    if (content.trim().length < CONTENT_MIN) {
+      const message = "Even one honest sentence is enough — but we need something to hold.";
+      setProblem(message);
+      toast.error(message);
+      return;
+    }
+    if (!intent) {
+      const message = "Choose whether you want advice or simply to be heard.";
       setProblem(message);
       toast.error(message);
       return;
     }
     const input = {
-      content,
-      category,
+      content: composeStory({ story: content, feelings, support }),
       intent,
       emotional_state: mood,
-      community_question: question,
-      highlight_on_instagram: highlight,
-      nickname,
-      chat_enabled: true,
-      chat_ttl: ttl,
+      category,
+      chat_ttl: intent === "Advice" ? ttl : "never",
     };
     const parsed = confessionSchema.safeParse(input);
     if (!parsed.success) {
@@ -154,19 +141,18 @@ export function ReleaseForm({
     inFlight.current = true;
     setLoading(true);
     setProblem(null);
-    // Start the native prompt during this click. Push is independent of the confession.
-    setPushStatus(null);
-    onPushStatus(null);
-    void subscribeToPush().then((status) => {
-      setPushStatus(status);
-      onPushStatus(status);
-    });
     try {
-      const result = await submitConfession(input, requestId.current, ageGroup);
+      const result = await submitConfession(input, requestId.current);
       playRelease();
-      onReleased(parsed.data.content, result.room);
+      onReleased(parsed.data.content, result.room, intent);
+      setSubmittedIntent(intent);
       setContent("");
-      setQuestion("");
+      setFeelings("");
+      setSupport("");
+      setCategory(null);
+      setMood(null);
+      setIntent(null);
+      setTtl("never");
       setReleased(true);
       // the confirmation is shorter than the form: bring the panel back into view
       if (panelRef.current) scrollControls.toElement(panelRef.current);
@@ -203,31 +189,19 @@ export function ReleaseForm({
               tabIndex={-1}
               className="mt-5 font-display text-[1.9rem] leading-tight text-cream outline-none sm:text-4xl"
             >
-              Your words have been received.
-              <span className="block italic text-gradient-gold">Thank you for sharing.</span>
+              Congratulations!!!!!
+              <span className="block italic text-gradient-gold">You let it go.</span>
             </h2>
             <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-muted-foreground">
-              Your story is in the mentor review queue. Your private chat is opening in this
-              browser.
+              Take a breath. Your story is here in your private chat.
             </p>
-            <p role="status" className="mx-auto mt-4 max-w-md text-xs text-muted-foreground">
-              {pushStatus ? PUSH_STATUS_MESSAGE[pushStatus] : "Checking browser updates…"}
-            </p>
-            {(pushStatus === "failed" || pushStatus === "dismissed") && (
-              <Button
-                variant="secondary"
-                className="mt-3 rounded-full"
-                onClick={() => {
-                  setPushStatus(null);
-                  void subscribeToPush().then(setPushStatus);
-                }}
-              >
-                Try notifications again
-              </Button>
+            {submittedIntent === "Advice" && (
+              <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-muted-foreground">
+                A verified counsellor or therapist can read your story and may reply here if you
+                need more support. Replies are not immediate or guaranteed.
+              </p>
             )}
-            <p className="mt-6 font-mono text-[0.5rem] uppercase tracking-[0.22em] text-muted-foreground/70">
-              In crisis? Tele-MANAS 14416 · Vandrevala 9999 666 555
-            </p>
+            <CrisisContacts className="mx-auto mt-6 max-w-md text-left" />
           </motion.div>
         ) : (
           <motion.div
@@ -248,35 +222,11 @@ export function ReleaseForm({
               No account, email, or real name is required. Share only what you choose.
             </p>
 
-            <div className="mt-6 rounded-2xl border border-primary/25 bg-primary/5 p-4">
-              <p className="font-mono text-[0.58rem] uppercase tracking-[0.22em] text-cream/85">
-                Age check · no date of birth is stored
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Pill
-                  active={ageGroup === "16-17"}
-                  onClick={() => {
-                    setAgeGroup("16-17");
-                    setHighlight("No");
-                  }}
-                >
-                  I am 16–17
-                </Pill>
-                <Pill active={ageGroup === "18+"} onClick={() => setAgeGroup("18+")}>
-                  I am 18 or older
-                </Pill>
-              </div>
-              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                If you are under 16, please do not submit. If you are 16–17, consider involving a
-                trusted adult; public sharing stays off for this visit.
-              </p>
-            </div>
-
             <div className="mt-7 space-y-5">
               <Field
                 n="01"
-                label="What is on your mind?"
-                hint="Write it the way it actually sits in your chest. Unedited is fine."
+                label="What happened, and what feels hardest right now?"
+                hint="Begin anywhere. What led up to this, and what is difficult to say? Please leave out names and contact details."
                 delay={0.15}
               >
                 <Textarea
@@ -286,156 +236,210 @@ export function ReleaseForm({
                     if (problem) setProblem(null);
                   }}
                   rows={5}
-                  maxLength={CONTENT_MAX}
-                  aria-label="What is on your mind?"
-                  aria-invalid={!!problem && content.trim().length < 10}
-                  placeholder="Start anywhere. Even mid-sentence."
-                  className="resize-none border-cream/12 bg-background/40 text-base text-cream sm:text-sm placeholder:text-muted-foreground/70 focus-visible:ring-primary/40"
+                  maxLength={STORY_MAX}
+                  aria-label="What happened, and what feels hardest right now?"
+                  aria-invalid={!!problem && content.trim().length < CONTENT_MIN}
+                  placeholder="Start wherever it feels easiest."
+                  className={ANSWER_CLASS}
                 />
                 <p className="mt-1.5 text-right font-mono text-[0.55rem] text-muted-foreground/60">
-                  {content.length}/{CONTENT_MAX}
+                  {content.length}/{STORY_MAX}
                 </p>
               </Field>
 
-              <Field n="02" label="Where does it hurt?" delay={0.24}>
-                <div className="flex flex-wrap gap-2">
-                  {CATEGORIES.map((c) => (
-                    <Pill key={c} active={category === c} onClick={() => setCategory(c)}>
-                      {c}
-                    </Pill>
-                  ))}
-                </div>
-              </Field>
-
-              <Field n="03" label="What do you want back?" delay={0.32}>
-                <div className="flex flex-wrap gap-2">
-                  {INTENTS.map((i) => (
-                    <Pill
-                      key={i.value}
-                      active={intent === i.value}
-                      onClick={() => setIntent(i.value)}
-                    >
-                      {i.label}
-                    </Pill>
-                  ))}
-                </div>
-              </Field>
-
-              <Field n="04" label="How heavy is today?" delay={0.4}>
-                <div className="flex items-center justify-between font-mono text-[0.55rem] uppercase tracking-[0.2em]">
-                  <span className="text-muted-foreground">Barely holding on</span>
-                  <span className="text-primary">{MOOD_LABELS[mood]}</span>
-                  <span className="text-muted-foreground">Actually okay</span>
-                </div>
-                <Slider
-                  value={[mood]}
-                  min={1}
-                  max={5}
-                  step={1}
-                  onValueChange={(v) => setMood(v[0])}
-                  className="mt-3.5"
+              <Field
+                n="02"
+                label="When does it feel hardest, and what have you tried?"
+                hint="Optional. Tell us how it affects your day and what has or has not helped."
+                delay={0.3}
+              >
+                <Textarea
+                  value={feelings}
+                  onChange={(e) => setFeelings(e.target.value)}
+                  rows={3}
+                  maxLength={FEELINGS_MAX}
+                  aria-label="When does it feel hardest, and what have you tried?"
+                  placeholder="For example, nights are hardest. Talking to a friend helped a little."
+                  className={ANSWER_CLASS}
                 />
+              </Field>
+
+              <Field
+                n="03"
+                label="What would you like us to understand or help with?"
+                hint="Optional. Is there more we should know? Tell us if you want listening, perspective, or a next step."
+                delay={0.45}
+              >
+                <Textarea
+                  value={support}
+                  onChange={(e) => setSupport(e.target.value)}
+                  rows={3}
+                  maxLength={SUPPORT_MAX}
+                  aria-label="What would you like us to understand or help with?"
+                  placeholder="For example, please listen first. I am unsure what to do next."
+                  className={ANSWER_CLASS}
+                />
+              </Field>
+
+              <Field
+                n="04"
+                label="Where does it hurt?"
+                hint="Choose a topic if one fits."
+                delay={0.5}
+              >
+                <div role="group" aria-label="Where does it hurt?" className="flex flex-wrap gap-2">
+                  {CATEGORIES.map((choice) => (
+                    <Pill
+                      key={choice}
+                      active={category === choice}
+                      onClick={() => setCategory(category === choice ? null : choice)}
+                    >
+                      {choice}
+                    </Pill>
+                  ))}
+                </div>
               </Field>
 
               <Field
                 n="05"
-                label="One question for the community"
-                hint="Optional. If strangers could answer one thing for you, what would it be?"
-                delay={0.48}
+                label="What do you want back?"
+                hint="Choose the kind of support you want."
+                delay={0.56}
               >
-                <Input
-                  value={question}
-                  onChange={(e) => setQuestion(e.target.value)}
-                  maxLength={QUESTION_MAX}
-                  aria-label="One question for the community"
-                  placeholder="Was I wrong to walk away?"
-                  className="border-cream/12 bg-background/40 text-base text-cream sm:text-sm placeholder:text-muted-foreground/70 focus-visible:ring-primary/40"
-                />
+                <div
+                  role="group"
+                  aria-label="What do you want back?"
+                  className="flex flex-wrap gap-2"
+                >
+                  {FORM_INTENTS.map((choice) => (
+                    <div key={choice.value} className="flex items-center gap-1">
+                      <Pill
+                        active={intent === choice.value}
+                        onClick={() => {
+                          setIntent(choice.value);
+                          setProblem(null);
+                        }}
+                      >
+                        {choice.label}
+                      </Pill>
+                      {choice.value === "Advice" && (
+                        <TooltipProvider delayDuration={150}>
+                          <Tooltip disableHoverableContent>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                aria-label="Advice terms"
+                                className="rounded-full px-1 text-base font-bold text-primary underline decoration-primary/60 focus-visible:outline-2 focus-visible:outline-primary"
+                              >
+                                *
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent
+                              side="top"
+                              className="max-w-64 border border-primary/40 bg-background p-3 text-left leading-relaxed text-cream shadow-xl"
+                            >
+                              A verified counsellor or therapist can read your story and may reply
+                              here if you need more support. Replies are not immediate or
+                              guaranteed.
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </Field>
 
               <Field
                 n="06"
-                label="Can we share this anonymously?"
-                hint={
-                  ageGroup === "16-17"
-                    ? "Public sharing is off for visitors aged 16–17."
-                    : "Only Yes permits the team to consider a reviewed anonymous excerpt. No and Maybe stay private."
-                }
-                delay={0.56}
+                label="How heavy is today?"
+                hint="Move the slider if a number helps."
+                delay={0.62}
               >
-                <div className="flex flex-wrap gap-2">
-                  {HIGHLIGHT_OPTIONS.filter((h) => ageGroup !== "16-17" || h === "No").map((h) => (
-                    <Pill key={h} active={highlight === h} onClick={() => setHighlight(h)}>
-                      {h}
-                    </Pill>
-                  ))}
+                <div className="flex items-center justify-between gap-2 font-mono text-[0.55rem] uppercase tracking-[0.12em] text-muted-foreground">
+                  <span>Very low</span>
+                  <span className="text-primary" aria-live="polite">
+                    {mood === null ? "Not chosen" : `${mood}/5 · ${MOOD_LABELS[mood]}`}
+                  </span>
+                  <span>Uplifted</span>
                 </div>
-              </Field>
-
-              <Field
-                n="07"
-                label="A name that is not yours"
-                hint="Optional. Something we can call you if we reply."
-                delay={0.64}
-              >
-                <Input
-                  value={nickname}
-                  onChange={(e) => setNickname(e.target.value)}
-                  maxLength={NICKNAME_MAX}
-                  aria-label="A name that is not yours"
-                  placeholder="Gumnam Dost"
-                  className="border-cream/12 bg-background/40 text-base text-cream sm:text-sm placeholder:text-muted-foreground/70 focus-visible:ring-primary/40"
+                <input
+                  type="range"
+                  min={1}
+                  max={5}
+                  step={1}
+                  value={mood ?? 3}
+                  onChange={(e) => setMood(Number(e.target.value))}
+                  aria-label="How heavy is today?"
+                  className="mt-3 w-full cursor-pointer accent-primary"
                 />
+                {mood !== null && (
+                  <button
+                    type="button"
+                    onClick={() => setMood(null)}
+                    className="mt-2 text-xs text-primary underline underline-offset-4"
+                  >
+                    Clear rating
+                  </button>
+                )}
               </Field>
 
-              <Field
-                n="08"
-                label="How long should your chat stay open?"
-                hint="Your private chat opens after you submit. You can return in this browser until you end it or it expires."
-                delay={0.72}
-              >
-                <div className="flex flex-wrap gap-2">
-                  {TTL_OPTIONS.map((t) => (
-                    <Pill key={t.value} active={ttl === t.value} onClick={() => setTtl(t.value)}>
-                      {t.label}
-                    </Pill>
-                  ))}
-                </div>
-              </Field>
+              {intent === "Advice" && (
+                <Field n="07" label="How long should your chat stay open?" delay={0.68}>
+                  <div
+                    role="group"
+                    aria-label="How long should your chat stay open?"
+                    className="flex flex-wrap gap-2"
+                  >
+                    {TTL_OPTIONS.map((choice) => (
+                      <Pill
+                        key={choice.value}
+                        active={ttl === choice.value}
+                        onClick={() => setTtl(choice.value)}
+                      >
+                        {choice.label}
+                      </Pill>
+                    ))}
+                  </div>
+                </Field>
+              )}
             </div>
 
             <div className="rise-in mt-8" style={{ animationDelay: "660ms" }}>
+              <CrisisContacts className="mb-5" />
+              {problem && (
+                <p role="alert" className="mb-4 text-center text-xs text-destructive">
+                  {problem}
+                </p>
+              )}
               <Button
                 onClick={submit}
                 disabled={loading}
                 size="lg"
                 className="group w-full rounded-full font-mono text-[0.68rem] uppercase tracking-[0.28em] glow-gold"
               >
-                {loading ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
+                {loading ? <BrandLoader size="small" label="Sending your story" /> : null}
                 {loading ? "Letting go…" : "Let it go"}
                 <ArrowRight className="size-4 transition-transform duration-300 group-hover:translate-x-1" />
               </Button>
               <p className="mt-3 text-center text-xs leading-relaxed text-muted-foreground">
-                Your browser may ask about occasional anonymous updates. Notifications are optional;
-                your submission continues either way. A browser push subscription is stored only if
-                you allow.
-              </p>
-              <p className="mt-2 text-center text-xs text-muted-foreground">
-                Please read our{" "}
-                <Link to="/terms" className="text-primary underline underline-offset-4">
-                  Terms &amp; Privacy
+                By submitting, you confirm you are at least 13 and agree to our{" "}
+                <Link
+                  to="/terms"
+                  hash="terms"
+                  className="text-primary underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-primary"
+                >
+                  Terms of Service
                 </Link>{" "}
-                before sharing.
-              </p>
-              <div aria-live="polite" className="mt-3 min-h-5 text-center text-xs">
-                {problem && (
-                  <p role="alert" className="text-destructive">
-                    {problem}
-                  </p>
-                )}
-              </div>
-              <p className="mt-2 text-center font-mono text-[0.5rem] uppercase tracking-[0.22em] text-muted-foreground/70">
-                In crisis? Tele-MANAS 14416 · Vandrevala 9999 666 555
+                and{" "}
+                <Link
+                  to="/terms"
+                  hash="privacy"
+                  className="text-primary underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-primary"
+                >
+                  Privacy Policy
+                </Link>
+                .
               </p>
             </div>
           </motion.div>

@@ -96,7 +96,7 @@ export function useRoomChat(room: StoredRoom | null) {
     return syncing.current;
   }, [room, merge, endWith]);
 
-  /** Re-read the whole visible history (after a mentor restores a hidden message). */
+  /** Re-read the whole visible history (after a care team member restores a hidden message). */
   const reload = useCallback(async () => {
     if (!room) return;
     const { data, error } = await supabase
@@ -130,6 +130,9 @@ export function useRoomChat(room: StoredRoom | null) {
     // per-run flag: under Strict Mode (and on fast room switches) a run that was
     // already cleaned up must never go on to open a channel nobody will remove
     let cancelled = false;
+    let opening = false;
+    let finished = false;
+    let retryTimer = 0;
 
     const stopPolling = () => window.clearInterval(pollRef.current);
     const startPolling = () => {
@@ -137,78 +140,94 @@ export function useRoomChat(room: StoredRoom | null) {
       pollRef.current = window.setInterval(() => void sync(), FALLBACK_POLL_MS);
     };
 
-    (async () => {
-      const { data, error } = await supabase
-        .rpc("get_chat_room", { _room_id: room.roomId, _token: room.token })
-        .abortSignal(timeoutSignal(12_000));
-      if (!alive.current || cancelled) return;
-      const row = data?.[0];
-      if (error || !row) {
-        const code = errorCode(error);
-        if (code === "room_not_found" || (!error && !row)) setState("not_found");
-        else {
-          // network trouble: keep trying quietly
-          setState("reconnecting");
-          startPolling();
-        }
-        return;
-      }
-      const info: ChatRoom = {
-        roomId: row.room_id,
-        alias: row.alias,
-        status: row.status as ChatRoom["status"],
-        expiresAt: row.expires_at,
-        topic: row.topic,
-      };
-      setMeta(info);
-      if (info.status !== "open") {
-        setState(info.status === "closed" ? "closed" : "expired");
-        return;
-      }
-
-      // the server is the judge of expiry; this only re-asks it at the right moment
-      if (info.expiresAt) {
-        const ms = new Date(info.expiresAt).getTime() - Date.now();
-        expiryRef.current = window.setTimeout(() => void sync(), Math.max(0, ms) + 1500);
-      }
-
-      await sync();
-      if (!alive.current || cancelled) return;
-
-      // signals carry no content: each one only prompts a read through the
-      // token-checked functions, so a forged broadcast cannot inject anything
-      channelRef.current = supabase
-        .channel(info.topic, { config: { broadcast: { self: false } } })
-        .on("broadcast", { event: "message" }, () => void sync())
-        .on("broadcast", { event: "moderated" }, ({ payload }) => {
-          const id = typeof payload?.id === "string" ? payload.id : null;
-          if (payload?.hidden === true && id) setLines((prev) => prev.filter((l) => l.id !== id));
-          else void reload();
-        })
-        .on("broadcast", { event: "room" }, ({ payload }) => {
-          if (payload?.status === "closed") setState("closed");
-          else void sync();
-        })
-        .subscribe((status) => {
-          if (!alive.current || cancelled) return;
-          const terminal = ["expired", "closed", "not_found"].includes(stateRef.current);
-          if (terminal) return;
-          if (status === "SUBSCRIBED") {
-            setState("connected");
-            stopPolling();
-            void sync(); // catch up on anything sent while we were away
-          } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+    const openRoom = async () => {
+      if (cancelled || finished || opening || channelRef.current) return;
+      opening = true;
+      try {
+        const { data, error } = await supabase
+          .rpc("get_chat_room", { _room_id: room.roomId, _token: room.token })
+          .abortSignal(timeoutSignal(12_000));
+        if (!alive.current || cancelled) return;
+        const row = data?.[0];
+        if (error || !row) {
+          const code = errorCode(error);
+          if (code === "room_not_found" || (!error && !row)) {
+            finished = true;
+            setState("not_found");
+          } else {
             setState("reconnecting");
-            startPolling(); // supabase-js rejoins with backoff; poll meanwhile
-          } else if (status === "CLOSED") {
-            setState("disconnected");
             startPolling();
+            window.clearTimeout(retryTimer);
+            retryTimer = window.setTimeout(() => void openRoom(), FALLBACK_POLL_MS);
           }
-        });
-    })();
+          return;
+        }
+        window.clearTimeout(retryTimer);
+        const info: ChatRoom = {
+          roomId: row.room_id,
+          alias: row.alias,
+          status: row.status as ChatRoom["status"],
+          expiresAt: row.expires_at,
+          topic: row.topic,
+        };
+        setMeta(info);
+        if (info.status !== "open") {
+          finished = true;
+          setState(info.status === "closed" ? "closed" : "expired");
+          return;
+        }
+
+        // the server is the judge of expiry; this only re-asks it at the right moment
+        if (info.expiresAt) {
+          const ms = new Date(info.expiresAt).getTime() - Date.now();
+          expiryRef.current = window.setTimeout(() => void sync(), Math.max(0, ms) + 1500);
+        }
+
+        await sync();
+        if (!alive.current || cancelled) return;
+
+        // signals carry no content: each one only prompts a read through the
+        // token-checked functions, so a forged broadcast cannot inject anything
+        channelRef.current = supabase
+          .channel(info.topic, { config: { broadcast: { self: false } } })
+          .on("broadcast", { event: "message" }, () => void sync())
+          .on("broadcast", { event: "moderated" }, ({ payload }) => {
+            const id = typeof payload?.id === "string" ? payload.id : null;
+            if (payload?.hidden === true && id) setLines((prev) => prev.filter((l) => l.id !== id));
+            else void reload();
+          })
+          .on("broadcast", { event: "room" }, ({ payload }) => {
+            if (payload?.status === "closed") {
+              finished = true;
+              setState("closed");
+            } else void sync();
+          })
+          .subscribe((status) => {
+            if (!alive.current || cancelled) return;
+            const terminal = ["expired", "closed", "not_found"].includes(stateRef.current);
+            if (terminal) return;
+            if (status === "SUBSCRIBED") {
+              setState("connected");
+              stopPolling();
+              void sync(); // catch up on anything sent while we were away
+            } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+              setState("reconnecting");
+              startPolling(); // supabase-js rejoins with backoff; poll meanwhile
+            } else if (status === "CLOSED") {
+              setState("disconnected");
+              startPolling();
+            }
+          });
+      } finally {
+        opening = false;
+      }
+    };
+    void openRoom();
 
     const resync = () => {
-      if (document.visibilityState === "visible") void sync();
+      if (document.visibilityState !== "visible" || finished) return;
+      if (channelRef.current) void sync();
+      else void openRoom();
     };
     window.addEventListener("online", resync);
     document.addEventListener("visibilitychange", resync);
@@ -216,6 +235,7 @@ export function useRoomChat(room: StoredRoom | null) {
     return () => {
       cancelled = true;
       alive.current = false;
+      window.clearTimeout(retryTimer);
       teardown();
       window.removeEventListener("online", resync);
       document.removeEventListener("visibilitychange", resync);

@@ -9,9 +9,9 @@ export function SiteHeader() {
         <div className="glass-panel mx-auto flex max-w-6xl items-center justify-between gap-4 rounded-full py-2.5 pl-3 pr-2.5 sm:pl-5 sm:pr-4">
           <Link to="/" className="group flex min-w-0 items-center gap-3">
             <img
-              src="/dil-ki-baat-logo.png"
-              alt=""
-              className="size-10 shrink-0 rounded-lg border border-primary/25 object-cover"
+              src="/dil-ki-baat-mark.png"
+              alt="Dil Ki Baat Haven logo"
+              className="size-10 shrink-0 rounded-lg border border-primary/25 object-contain"
             />
             <span className="flex min-w-0 flex-col leading-none">
               <span className="truncate font-display text-[1.15rem] tracking-tight text-cream">
@@ -28,7 +28,7 @@ export function SiteHeader() {
               to="/terms"
               className="hidden text-sm text-muted-foreground transition-colors hover:text-primary sm:inline"
             >
-              Terms
+              Terms of Service
             </Link>
             <AudioToggle />
             <HelpModal />

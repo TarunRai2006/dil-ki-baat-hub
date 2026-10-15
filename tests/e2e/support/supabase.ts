@@ -31,7 +31,7 @@ export type Recorded = {
 };
 
 export type MockOptions = {
-  /** answer submit_confession with this error once (then succeed) */
+  /** answer the visitor submission RPC with this error once (then succeed) */
   failFirstSubmit?: { status: number; message: string };
   /** admin session state for /admin tests */
   user?: "admin" | "plain" | null;
@@ -55,6 +55,7 @@ export async function mockSupabase(page: Page, opts: MockOptions = {}) {
   }[] = [];
   let failFirstSubmit = opts.failFirstSubmit;
   let failNextUpdate = opts.failNextUpdate ?? false;
+  let roomExpiresAt: string | null = null;
   const origin = new URL(supabaseUrl()).origin;
 
   await page.routeWebSocket(/\/realtime\/v1\/websocket/, (ws) => ws.close());
@@ -94,19 +95,20 @@ export async function mockSupabase(page: Page, opts: MockOptions = {}) {
     switch (fn) {
       case "get_public_whispers":
         return json(whispers.map((excerpt) => ({ excerpt })));
-      case "submit_confession_v2":
+      case "submit_confession_v6":
         if (failFirstSubmit) {
           const f = failFirstSubmit;
           failFirstSubmit = undefined;
           return json({ code: "XX000", message: f.message }, f.status);
         }
+        roomExpiresAt = null;
         return json([
           {
             submission_id: "new-1",
             alias: "Gumnam Dost #123",
-            room_id: body._chat_enabled ? submissions[0].id : null,
-            room_token: body._chat_enabled ? "a".repeat(48) : null,
-            room_expires_at: new Date(Date.now() + 86_400_000).toISOString(),
+            room_id: submissions[0].id,
+            room_token: "a".repeat(48),
+            room_expires_at: roomExpiresAt,
           },
         ]);
       case "get_chat_room":
@@ -115,7 +117,7 @@ export async function mockSupabase(page: Page, opts: MockOptions = {}) {
             room_id: body._room_id,
             alias: "Gumnam Dost #123",
             status: "open",
-            expires_at: new Date(Date.now() + 86_400_000).toISOString(),
+            expires_at: roomExpiresAt,
             topic: "room:test",
           },
         ]);

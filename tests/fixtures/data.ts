@@ -113,7 +113,7 @@ export const validConfession = {
   intent: "Advice",
   emotional_state: 2,
   community_question: "Should I talk to my manager?",
-  highlight_on_instagram: "Yes",
+  highlight_on_instagram: "No",
   nickname: "Tired Owl",
   chat_enabled: true,
   chat_ttl: "24h",

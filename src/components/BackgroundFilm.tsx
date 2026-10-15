@@ -1,9 +1,10 @@
 import { useEffect, useRef } from "react";
 
 export const FILM = {
-  src: "/media/intro.mp4",
+  src: "/media/city-film-v2.mp4",
+  mobileSrc: "/media/city-film-mobile-v2.mp4",
   /** the film's exact first frame, so poster -> video is not a visible change */
-  poster: "/media/intro-poster.webp",
+  poster: "/media/city-film-poster-v2.webp",
 } as const;
 
 /** Dev-only switches for exercising the fallbacks: ?film=blocked|error */
@@ -34,7 +35,7 @@ export function BackgroundFilm() {
       // keep the poster: free the decoder and the connection
       frame.removeAttribute("data-ready");
       v.pause();
-      v.removeAttribute("src");
+      v.querySelectorAll("source").forEach((source) => source.removeAttribute("src"));
       v.load();
     };
     const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
@@ -50,6 +51,7 @@ export function BackgroundFilm() {
     const ready = () => frame.setAttribute("data-ready", "");
     const onError = () => alive && still();
     const play = () => {
+      if (mode === "blocked" || !v.querySelector("source[src]")) return;
       v.play().catch((err: unknown) => {
         if (!alive) return;
         // autoplay refused (low-power mode, browser policy): stay on the poster
@@ -63,6 +65,11 @@ export function BackgroundFilm() {
     v.muted = true;
     v.addEventListener("playing", ready);
     v.addEventListener("error", onError);
+    const onVisibilityChange = () => {
+      if (document.hidden) v.pause();
+      else play();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
     if (v.error) onError();
     else if (mode === "blocked") v.pause();
     else if (!v.paused && v.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) ready();
@@ -73,6 +80,7 @@ export function BackgroundFilm() {
       window.removeEventListener("pointerdown", play);
       v.removeEventListener("playing", ready);
       v.removeEventListener("error", onError);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       v.pause();
     };
   }, []);
@@ -91,22 +99,24 @@ export function BackgroundFilm() {
         />
         <video
           ref={videoRef}
-          src={FILM.src}
           poster={FILM.poster}
           muted
           autoPlay
           loop
           playsInline
           webkit-playsinline=""
-          preload="auto"
+          preload="metadata"
           disablePictureInPicture
           disableRemotePlayback
           tabIndex={-1}
-        />
+        >
+          <source media="(max-width: 640px)" src={FILM.mobileSrc} type="video/mp4" />
+          <source src={FILM.src} type="video/mp4" />
+        </video>
       </div>
       {/* the grade: maroon night at the edges, a calm dark centre for the form */}
-      <div className="absolute inset-0 bg-[radial-gradient(85%_70%_at_50%_45%,rgb(18_6_10/55%)_0%,rgb(12_4_8/82%)_70%,rgb(7_9_14/92%)_100%)]" />
-      <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgb(42_4_6/35%),transparent_35%,transparent_70%,rgb(7_9_14/70%))]" />
+      <div className="absolute inset-0 bg-[radial-gradient(85%_70%_at_50%_45%,rgb(18_6_10/30%)_0%,rgb(12_4_8/62%)_70%,rgb(7_9_14/82%)_100%)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgb(42_4_6/22%),transparent_35%,transparent_70%,rgb(7_9_14/65%))]" />
     </div>
   );
 }

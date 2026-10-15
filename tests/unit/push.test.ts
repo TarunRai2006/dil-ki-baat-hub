@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { notificationSchema, subscriptionSchema } from "@/lib/push-shared";
-import { subscribeToPush } from "@/lib/push-client";
+import { installPushPromptOnFirstInteraction, subscribeToPush } from "@/lib/push-client";
 
 const payload = {
   endpoint: "https://fcm.googleapis.com/fcm/send/test-endpoint",
@@ -11,6 +11,8 @@ const payload = {
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
+  localStorage.clear();
+  document.body.innerHTML = "";
 });
 
 describe("push boundaries", () => {
@@ -70,7 +72,7 @@ describe("optional browser subscription", () => {
     return { requestPermission, getSubscription, subscribe, register, fetchMock };
   }
 
-  it("requests permission during the submit call and saves only after allow", async () => {
+  it("requests permission during a user gesture and saves only after allow", async () => {
     const mock = supported();
     const attempt = subscribeToPush();
     expect(mock.requestPermission).toHaveBeenCalledOnce();
@@ -82,6 +84,33 @@ describe("optional browser subscription", () => {
         method: "POST",
       }),
     );
+  });
+
+  it("asks on the first story interaction, never on load or after dismissal", async () => {
+    const mock = supported();
+    mock.requestPermission.mockResolvedValue("default");
+    document.body.innerHTML =
+      '<main id="release"><textarea aria-label="Your story"></textarea></main>';
+    const cleanup = installPushPromptOnFirstInteraction();
+    expect(mock.requestPermission).not.toHaveBeenCalled();
+    document.querySelector("textarea")!.click();
+    expect(mock.requestPermission).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(localStorage.getItem("dkb_push_prompted_v1")).toBe("1"));
+    document.querySelector("textarea")!.click();
+    cleanup();
+    const cleanupNextVisit = installPushPromptOnFirstInteraction();
+    document.querySelector("textarea")!.click();
+    expect(mock.requestPermission).toHaveBeenCalledOnce();
+    cleanupNextVisit();
+  });
+
+  it("does not ask when clicking outside the story or chat", () => {
+    const mock = supported();
+    document.body.innerHTML = '<button id="help">Get help</button><main id="release"></main>';
+    const cleanup = installPushPromptOnFirstInteraction();
+    document.querySelector("#help")!.click();
+    expect(mock.requestPermission).not.toHaveBeenCalled();
+    cleanup();
   });
 
   it("does not prompt again or resubscribe when already granted", async () => {

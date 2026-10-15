@@ -120,7 +120,7 @@ export function AdminStats({
     ["Archived", s?.archived],
     ["Featured", s?.featured],
     ["Live chats", s?.live_chats],
-    ["Pulse index", s?.pulse ?? "—"],
+    ["Mood ratings", s?.pulse ?? "—"],
   ];
   return (
     <div className="space-y-4">
@@ -131,21 +131,21 @@ export function AdminStats({
       </section>
       <div className="grid gap-4 lg:grid-cols-2">
         <ChartCard
-          title="Where it hurts"
+          title="Topics from older forms"
           data={s?.categories ?? []}
           dataKey="name"
           loading={loading}
           empty={!s?.categories.length}
         />
         <ChartCard
-          title="How heavy today is"
+          title="Mood ratings"
           data={(s?.moods ?? []).map((m) => ({
             label: `${m.mood} · ${MOOD_LABELS[m.mood]}`,
             count: m.count,
           }))}
           dataKey="label"
           loading={loading}
-          empty={!s?.total}
+          empty={!s?.moods.some((m) => m.count > 0)}
         />
       </div>
     </div>

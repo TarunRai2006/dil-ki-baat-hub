@@ -23,11 +23,13 @@ export const HINGLISH_THOUGHTS = [
 
 export const INTENTS = [
   { value: "Advice", label: "I want advice" },
-  { value: "Express", label: "I just want to express" },
+  { value: "Express", label: "I want to be heard" },
   { value: "Both", label: "Both" },
 ] as const;
 
-export const HIGHLIGHT_OPTIONS = ["Yes", "No", "Maybe"] as const;
+// Keep the historical "Both" value readable in the dashboard, but do not
+// offer it on new stories.
+export const FORM_INTENTS = INTENTS.filter((intent) => intent.value !== "Both");
 
 export const TTL_OPTIONS = [
   { value: "1h", label: "Disappear in 1 hour" },
@@ -82,30 +84,30 @@ export const WHISPERS = [
 export const WHY_IT_WORKS = [
   {
     k: "Naming it",
-    t: "Words make a feeling smaller",
-    d: "The moment a heavy feeling becomes a sentence, it stops being an ocean and starts having edges.",
+    t: "Put a feeling into words",
+    d: "Writing can help you notice what has been weighing on you and what you may need next.",
   },
   {
     k: "Being witnessed",
-    t: "Being read beats being fixed",
-    d: "Most of us do not need a solution. We need proof that someone actually received it.",
+    t: "Be heard without pressure",
+    d: "You can ask for advice or simply to be heard. Your choice tells the team what you need.",
   },
   {
     k: "Distance",
-    t: "No name, no editing yourself",
-    d: "When nobody can link the story to your face, you finally write the honest version.",
+    t: "Share without a real name",
+    d: "No account is needed. Leave out identifying details and share only what feels right to you.",
   },
   {
     k: "Perspective",
-    t: "Someone has stood here before",
-    d: "They will tell you what they would do differently, and it costs you nothing to ask.",
+    t: "Get a thoughtful response",
+    d: "A counsellor or therapist may respond in your private chat. Replies can take time.",
   },
 ];
 
 export const FAQS = [
   {
     q: "Will anyone know it was me?",
-    a: "No. We never ask for your name, email or phone number, and nothing is ever linked back to you.",
+    a: "We do not ask for your real name, email or phone number. Authorised counsellors and therapists can read what you share. Please leave out identifying details; no online service can promise perfect anonymity.",
   },
   {
     q: "Do I have to be in crisis to write?",
@@ -113,11 +115,11 @@ export const FAQS = [
   },
   {
     q: "What if I do not want advice?",
-    a: "Then say so. You can choose to simply be heard, and nobody will hand you a lesson you did not ask for.",
+    a: "Choose “I want to be heard” on the form. The person who reads your story will see that preference.",
   },
   {
-    q: "Is this therapy?",
-    a: "No. This is peer support and honest perspective. If you are in danger, please call a helpline. They are listed on every page.",
+    q: "Who can respond?",
+    a: "Verified counsellors and therapists may reply in your private chat. A reply is not guaranteed or immediate. If you are in danger, use the crisis contacts on this page.",
   },
 ];
 

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { AlertCircle, Check, Loader2, RotateCw, Send, Timer, X } from "lucide-react";
+import { AlertCircle, Check, RotateCw, Send, Timer, X } from "lucide-react";
+import { BrandLoader } from "@/components/BrandLoader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -26,8 +27,7 @@ const STATE_TONE: Record<ConnectionState, string> = {
   not_found: "bg-muted-foreground",
 };
 
-function expiryLabel(expiresAt: string | null) {
-  if (!expiresAt) return "Never disappears";
+function expiryLabel(expiresAt: string) {
   const ms = new Date(expiresAt).getTime() - Date.now();
   if (ms <= 0) return "Disappeared";
   const h = Math.floor(ms / 3_600_000);
@@ -51,6 +51,7 @@ export function ChatThread({
   const [hint, setHint] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const ended = state === "expired" || state === "closed" || state === "not_found";
+  const expiresAt = meta?.expiresAt ?? room.expiresAt;
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -83,11 +84,15 @@ export function ChatThread({
               <span className={`size-1.5 rounded-full ${STATE_TONE[state]}`} aria-hidden="true" />
               {sentFlash && state === "connected" ? "Message sent" : STATE_LABEL[state]}
             </span>
-            <span aria-hidden="true">·</span>
-            <span className="inline-flex items-center gap-1">
-              <Timer className="size-3" aria-hidden="true" />
-              {expiryLabel(meta?.expiresAt ?? room.expiresAt)}
-            </span>
+            {expiresAt && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span className="inline-flex items-center gap-1">
+                  <Timer className="size-3" aria-hidden="true" />
+                  {expiryLabel(expiresAt)}
+                </span>
+              </>
+            )}
           </p>
         </div>
         {onClose && (
@@ -106,8 +111,8 @@ export function ChatThread({
               </p>
               <p className="mt-1 text-sm text-muted-foreground">Start the conversation.</p>
               <p className="mt-3 text-xs leading-relaxed text-muted-foreground/80">
-                A mentor may reply here. Please keep real names and contact details out of your
-                messages.
+                A counsellor or therapist may reply here. Please keep real names and contact details
+                out of your messages.
               </p>
             </div>
           )}
@@ -127,7 +132,7 @@ export function ChatThread({
               </div>
               {m.pending === "sending" && (
                 <span className="mt-1 inline-flex items-center gap-1 text-[0.65rem] text-muted-foreground">
-                  <Loader2 className="size-3 animate-spin" aria-hidden="true" /> Sending
+                  <BrandLoader size="small" label="Sending message" /> Sending
                 </span>
               )}
               {m.pending === "failed" && m.client_msg_id && (
@@ -154,7 +159,7 @@ export function ChatThread({
                 {state === "expired"
                   ? "This chat has disappeared as promised. Nothing more can be sent here."
                   : state === "closed"
-                    ? "A mentor has closed this chat. You can always write again."
+                    ? "A counsellor or therapist has closed this chat. You can always write again."
                     : "This chat could not be found. It may have ended."}
               </p>
               {onEnded && (

@@ -23,8 +23,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(title, {
       body,
-      icon: "/dil-ki-baat-logo.png",
-      badge: "/dil-ki-baat-logo.png",
+      icon: "/dil-ki-baat-mark.png",
+      badge: "/dil-ki-baat-mark.png",
       tag: "dil-ki-baat",
       data: { path },
     }),

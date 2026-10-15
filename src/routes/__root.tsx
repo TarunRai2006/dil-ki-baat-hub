@@ -110,7 +110,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/dil-ki-baat-logo.png", type: "image/png" },
+      { rel: "icon", href: "/dil-ki-baat-mark.png", type: "image/png" },
       { rel: "manifest", href: "/manifest.webmanifest" },
     ],
   }),

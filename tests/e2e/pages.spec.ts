@@ -2,8 +2,8 @@ import { expect, test } from "@playwright/test";
 import { hydrated, mockSupabase } from "./support/supabase";
 
 for (const [path, heading] of [
-  ["/terms", /terms and privacy/i],
-  ["/auth", /mentor access/i],
+  ["/terms", /terms of service and privacy policy/i],
+  ["/auth", /counsellor & therapist access/i],
   ["/no-such-page", /404/],
 ] as const) {
   test(`${path}: title visible below the header, no sideways scroll`, async ({ page }) => {
@@ -37,14 +37,16 @@ test("visitor, terms and missing-page links reach their intended pages", async (
   await mockSupabase(page);
   await page.goto("/");
   await hydrated(page, "#release textarea");
-  await page.getByRole("link", { name: "Terms & Privacy" }).click();
-  await expect(page).toHaveURL(/\/terms$/);
-  await expect(page.getByRole("heading", { name: "Terms and Privacy" })).toBeVisible();
+  await page.getByRole("link", { name: "Terms of Service", exact: true }).click();
+  await expect(page).toHaveURL(/\/terms#terms$/);
+  await expect(
+    page.getByRole("heading", { name: "Terms of Service and Privacy Policy" }),
+  ).toBeVisible();
   await page.getByRole("link", { name: /back to dil ki baat/i }).click();
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByLabel("What is on your mind?")).toBeVisible();
-  await page.getByRole("link", { name: "Terms and Privacy" }).click();
-  await expect(page).toHaveURL(/\/terms$/);
+  await expect(page.getByLabel("What happened, and what feels hardest right now?")).toBeVisible();
+  await page.getByRole("link", { name: "Privacy Policy", exact: true }).click();
+  await expect(page).toHaveURL(/\/terms#privacy$/);
   await page.goto("/no-such-page");
   await page.getByRole("link", { name: "Go home" }).click();
   await expect(page).toHaveURL(/\/$/);
@@ -56,7 +58,10 @@ test("small phone has no sideways scroll on form or terms", async ({ page }) => 
   for (const path of ["/", "/terms"]) {
     await page.goto(path);
     if (path === "/") await hydrated(page, "#release textarea");
-    else await expect(page.getByRole("heading", { name: "Terms and Privacy" })).toBeVisible();
+    else
+      await expect(
+        page.getByRole("heading", { name: "Terms of Service and Privacy Policy" }),
+      ).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), path).toBe(
       0,
     );

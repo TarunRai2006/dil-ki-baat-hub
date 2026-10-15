@@ -141,7 +141,7 @@ export type Database = {
           age_group: string | null
           alias: string
           anon_user_id: string | null
-          category: string
+          category: string | null
           chat_enabled: boolean
           chat_ttl: string
           client_request_id: string | null
@@ -149,10 +149,10 @@ export type Database = {
           content: string
           created_at: string
           deleted_at: string | null
-          emotional_state: number
+          emotional_state: number | null
           highlight_on_instagram: string
           id: string
-          intent: string
+          intent: string | null
           is_archived: boolean
           is_featured: boolean
           nickname: string | null
@@ -167,7 +167,7 @@ export type Database = {
           age_group?: string | null
           alias?: string
           anon_user_id?: string | null
-          category?: string
+          category?: string | null
           chat_enabled?: boolean
           chat_ttl?: string
           client_request_id?: string | null
@@ -175,10 +175,10 @@ export type Database = {
           content: string
           created_at?: string
           deleted_at?: string | null
-          emotional_state?: number
+          emotional_state?: number | null
           highlight_on_instagram?: string
           id?: string
-          intent?: string
+          intent?: string | null
           is_archived?: boolean
           is_featured?: boolean
           nickname?: string | null
@@ -192,7 +192,7 @@ export type Database = {
           age_group?: string | null
           alias?: string
           anon_user_id?: string | null
-          category?: string
+          category?: string | null
           chat_enabled?: boolean
           chat_ttl?: string
           client_request_id?: string | null
@@ -200,10 +200,10 @@ export type Database = {
           content?: string
           created_at?: string
           deleted_at?: string | null
-          emotional_state?: number
+          emotional_state?: number | null
           highlight_on_instagram?: string
           id?: string
-          intent?: string
+          intent?: string | null
           is_archived?: boolean
           is_featured?: boolean
           nickname?: string | null
@@ -360,6 +360,82 @@ export type Database = {
           _emotional_state: number
           _highlight_on_instagram: string
           _intent: string
+          _nickname: string
+        }
+        Returns: {
+          alias: string
+          room_expires_at: string | null
+          room_id: string | null
+          room_token: string | null
+          submission_id: string
+        }[]
+      }
+      submit_confession_v3: {
+        Args: {
+          _anon_user_id: string
+          _category: string
+          _chat_enabled: boolean
+          _chat_ttl: string
+          _client_request_id: string
+          _community_question: string
+          _consent_confirmed: boolean
+          _content: string
+          _emotional_state: number
+          _highlight_on_instagram: string
+          _intent: string
+          _nickname: string
+        }
+        Returns: {
+          alias: string
+          room_expires_at: string | null
+          room_id: string | null
+          room_token: string | null
+          submission_id: string
+        }[]
+      }
+      submit_confession_v4: {
+        Args: {
+          _anon_user_id: string
+          _client_request_id: string
+          _consent_confirmed: boolean
+          _content: string
+        }
+        Returns: {
+          alias: string
+          room_expires_at: string | null
+          room_id: string | null
+          room_token: string | null
+          submission_id: string
+        }[]
+      }
+      submit_confession_v5: {
+        Args: {
+          _anon_user_id: string
+          _client_request_id: string
+          _consent_confirmed: boolean
+          _content: string
+          _emotional_state: number | null
+          _intent: string | null
+        }
+        Returns: {
+          alias: string
+          room_expires_at: string | null
+          room_id: string | null
+          room_token: string | null
+          submission_id: string
+        }[]
+      }
+      submit_confession_v6: {
+        Args: {
+          _anon_user_id: string
+          _category: string | null
+          _chat_ttl: string
+          _client_request_id: string
+          _community_question: string
+          _consent_confirmed: boolean
+          _content: string
+          _emotional_state: number | null
+          _intent: string | null
           _nickname: string
         }
         Returns: {
