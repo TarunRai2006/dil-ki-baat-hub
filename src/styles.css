@@ -378,6 +378,20 @@ html[data-room-pending="true"] #release [data-room-view="form"] {
   will-change: transform;
 }
 
+.header-marquee[data-continuous="true"] {
+  animation: none;
+}
+
+.header-marquee[data-continuous="true"] .header-marquee-track {
+  animation: marquee-loop 45s linear infinite;
+}
+
+@keyframes marquee-loop {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
 @keyframes brand-heartbeat {
   0%,
   100% {
@@ -397,6 +411,7 @@ html[data-room-pending="true"] #release [data-room-view="form"] {
 
 @media (prefers-reduced-motion: reduce) {
   .header-marquee-track,
+  .header-marquee[data-continuous="true"] .header-marquee-track,
   .brand-loader {
     animation: none;
     transform: none;

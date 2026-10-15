@@ -20,7 +20,7 @@ it("shows ten illustrative thoughts for ten seconds, then removes the strip", ()
   expect(container.querySelector(".header-marquee")).toBeNull();
 });
 
-it("starts the footer strip only when it enters view", () => {
+it("starts the footer strip on view and keeps it moving after ten seconds", () => {
   vi.useFakeTimers();
   let onIntersect: IntersectionObserverCallback | undefined;
   const observe = vi.fn();
@@ -36,7 +36,7 @@ it("starts the footer strip only when it enters view", () => {
     },
   );
 
-  const { container } = render(<WhispersMarquee startOnView />);
+  const { container } = render(<WhispersMarquee startOnView continuous />);
   expect(observe).toHaveBeenCalledOnce();
   act(() => vi.advanceTimersByTime(10_000));
   expect(container.querySelector('[data-marquee="bottom"]')).not.toBeNull();
@@ -49,5 +49,8 @@ it("starts the footer strip only when it enters view", () => {
   );
   expect(disconnect).toHaveBeenCalled();
   act(() => vi.advanceTimersByTime(10_000));
-  expect(container.querySelector('[data-marquee="bottom"]')).toBeNull();
+  expect(container.querySelector('[data-marquee="bottom"]')).not.toBeNull();
+  expect(container.querySelectorAll(".header-marquee-thought")).toHaveLength(20);
+  act(() => vi.advanceTimersByTime(60_000));
+  expect(container.querySelector('[data-marquee="bottom"]')).not.toBeNull();
 });

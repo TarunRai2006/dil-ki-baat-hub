@@ -11,7 +11,7 @@ This repository contains the visitor site, admin dashboard, Supabase migrations,
 3. Submitting creates one private story and a token-protected chat. The completion dialog puts “Congratulations!!!!!” and “You let it go.” on separate lines. The counsellor note appears only for the advice choice.
 4. While a chat is active, it replaces the form. The browser stores the room token locally, so the visitor can reopen that chat after refreshing or returning in the **same browser profile and origin**. There is no account, recovery code, or access from another device. Ending the chat deletes its live messages and returns the form; the original story remains for moderation.
 
-The moving thought strips above the form and above the footer use ten fixed sample lines, never private submissions. Each runs for ten seconds; the footer strip starts when it enters view.
+The moving thought strips above the form and above the footer use ten fixed sample lines, never private submissions. The upper strip disappears after ten seconds. The footer strip starts when it enters view and keeps moving.
 
 New stories are **private by default**. The current form has no public sharing choice. Historical stories may still be eligible for public excerpts if they had the earlier consent and were approved and featured. The Terms of Service state a minimum age of 16 and require parent or guardian permission for visitors aged 16–17; the application does not verify that permission. Review those safeguards before a public launch.
 
