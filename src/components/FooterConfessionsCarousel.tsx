@@ -1,37 +1,21 @@
 import { useEffect, useRef, useState } from "react";
-import { fetchWhispers } from "@/lib/confession";
 
-// These are examples, not visitor submissions. Private stories never enter this carousel.
-const EXAMPLE_CONFESSIONS = [
-  "I say I'm fine, but I have been carrying a lot lately.",
-  "I miss a friend and do not know how to reach out.",
-  "I want a different future, but I am scared to disappoint my family.",
-  "I keep saying yes when I really need a break.",
-  "I feel lonely, even in a room full of people.",
-  "I wish I could tell someone how much that goodbye hurt.",
+// The original illustrative ticker lines. They are examples, not visitor submissions.
+const CONFESSIONS = [
+  'Someone in Pune just released: "I am tired in a way sleep does not fix."',
+  'Someone in Delhi just released: "I said yes when I meant no. Again."',
+  'Someone in Kochi just released: "My parents want a life I never picked."',
+  'Someone in Jaipur just released: "I miss a person who was not good for me."',
+  'Someone in Kolkata just released: "Everyone my age seems so far ahead of me."',
+  'Someone in Indore just released: "I smile all day and overthink at 2 AM."',
 ] as const;
 
 export function FooterConfessionsCarousel() {
-  const sectionRef = useRef<HTMLElement>(null);
-  const [shared, setShared] = useState<string[]>([]);
+  const stripRef = useRef<HTMLDivElement>(null);
   const [started, setStarted] = useState(false);
 
   useEffect(() => {
-    let active = true;
-    void fetchWhispers()
-      .then((lines) => {
-        if (active) setShared(lines.filter((line) => line.trim().length > 0));
-      })
-      .catch(() => {
-        // Keep the labelled examples if the public feed is unavailable.
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!("IntersectionObserver" in window) || !sectionRef.current) {
+    if (!("IntersectionObserver" in window) || !stripRef.current) {
       setStarted(true);
       return;
     }
@@ -41,58 +25,46 @@ export function FooterConfessionsCarousel() {
         observer.disconnect();
       }
     });
-    observer.observe(sectionRef.current);
+    observer.observe(stripRef.current);
     return () => observer.disconnect();
   }, []);
 
-  const lines = shared.length > 0 ? shared : EXAMPLE_CONFESSIONS;
-  const items = Array.from(
-    { length: Math.max(6, lines.length) },
-    (_, index) => lines[index % lines.length],
-  );
-
   return (
-    <section
-      ref={sectionRef}
-      aria-labelledby="footer-confessions-title"
-      data-confessions-source={shared.length > 0 ? "approved" : "examples"}
+    <div
+      ref={stripRef}
+      aria-label="Confessions ticker"
+      data-confessions-source="examples"
       data-started={started}
-      className="relative z-40 overflow-hidden border-t border-primary/25 bg-background pb-[max(2rem,env(safe-area-inset-bottom))] pt-8 text-cream sm:pt-10"
+      className="flex min-w-0 items-center overflow-hidden border-t border-primary/25 bg-background pb-[env(safe-area-inset-bottom)]"
     >
-      <div className="mx-auto max-w-5xl px-6 sm:px-10">
-        <p className="font-mono text-[0.6rem] uppercase tracking-[0.28em] text-primary">
-          Words from the heart
-        </p>
-        <h2 id="footer-confessions-title" className="mt-2 font-display text-2xl sm:text-3xl">
-          Confessions
-        </h2>
-        <p className="mt-2 max-w-2xl text-xs leading-relaxed text-muted-foreground sm:text-sm">
-          {shared.length > 0
-            ? "Anonymous excerpts shared with permission and approved for this space."
-            : "Examples of what someone might share. These are not visitor submissions."}
-        </p>
-      </div>
+      <span className="relative z-10 shrink-0 border-r border-primary/25 bg-background px-3 py-2.5 font-mono text-[0.55rem] font-semibold uppercase tracking-[0.16em] text-primary sm:px-5 sm:text-[0.6rem]">
+        Confessions · examples
+      </span>
+      <span className="sr-only">Illustrative examples, not visitor submissions.</span>
 
-      <div className="footer-confessions-window mt-6 overflow-hidden sm:mt-7">
+      <div className="footer-confessions-window min-w-0 flex-1 overflow-hidden">
         <div
-          className="footer-confessions-track flex w-max"
-          style={{ animationDuration: `${items.length * 6}s` }}
+          className="footer-confessions-track flex w-max whitespace-nowrap"
+          style={{ animationDuration: "38s" }}
         >
           {[0, 1].map((copy) => (
-            <div key={copy} className="flex shrink-0" aria-hidden={copy === 1 ? true : undefined}>
-              {items.map((line, index) => (
-                <blockquote
+            <div
+              key={copy}
+              className="flex min-w-[100vw] shrink-0 items-center gap-12 px-6"
+              aria-hidden={copy === 1 ? true : undefined}
+            >
+              {CONFESSIONS.map((line, index) => (
+                <span
                   key={`${copy}-${index}`}
-                  aria-hidden={index >= lines.length || undefined}
-                  className="mx-2 flex w-64 shrink-0 items-center rounded-xl border border-primary/30 bg-primary/5 px-5 py-5 font-display text-base italic leading-snug text-cream/90 sm:w-80 sm:text-lg"
+                  className="shrink-0 font-mono text-[0.62rem] tracking-wide text-muted-foreground"
                 >
-                  “{line}”
-                </blockquote>
+                  {line}
+                </span>
               ))}
             </div>
           ))}
         </div>
       </div>
-    </section>
+    </div>
   );
 }

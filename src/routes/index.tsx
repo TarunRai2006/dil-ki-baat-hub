@@ -6,7 +6,6 @@ import { HelpModal } from "@/components/HelpModal";
 import { AudioToggle } from "@/components/AudioToggle";
 import { BackgroundFilm } from "@/components/BackgroundFilm";
 import { SiteFooter } from "@/components/SiteFooter";
-import { FooterConfessionsCarousel } from "@/components/FooterConfessionsCarousel";
 import { ReleaseForm } from "@/components/city/ReleaseForm";
 import { ActiveChatView } from "@/components/city/ActiveChatView";
 import { WhispersMarquee } from "@/components/WhispersMarquee";
@@ -145,7 +144,6 @@ function City() {
 
         <div className="relative z-40">
           <SiteFooter />
-          <FooterConfessionsCarousel />
         </div>
       </div>
     </MotionConfig>

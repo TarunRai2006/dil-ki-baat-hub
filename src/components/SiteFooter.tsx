@@ -1,14 +1,15 @@
 import { Link } from "@tanstack/react-router";
 import { Instagram, Mail, ShieldCheck } from "lucide-react";
 import { CrisisContacts } from "@/components/CrisisContacts";
+import { FooterConfessionsCarousel } from "@/components/FooterConfessionsCarousel";
 
 const EMAIL = "dil.ki.baat.humare.sath@gmail.com";
 const INSTAGRAM = "https://instagram.com/dil.ki.baat.sabkesath";
 
 export function SiteFooter() {
   return (
-    <footer className="relative z-20 bg-background px-6 pb-10 pt-14 shadow-[0_-60px_80px_-40px_rgb(0_0_0/90%)] sm:px-10">
-      <div className="mx-auto max-w-5xl">
+    <footer className="relative z-20 bg-background px-6 pt-14 shadow-[0_-60px_80px_-40px_rgb(0_0_0/90%)] sm:px-10">
+      <div className="mx-auto max-w-5xl pb-10">
         <div className="hairline mb-12" />
 
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-[1.2fr_1fr_1fr] lg:gap-12">
@@ -89,6 +90,9 @@ export function SiteFooter() {
           <p>© {new Date().getFullYear()} aapkamentor.ai. Dil Ki Baat. All rights reserved.</p>
           <p className="text-muted-foreground/80">Made with a lot of feeling, in India.</p>
         </div>
+      </div>
+      <div className="-mx-6 sm:-mx-10">
+        <FooterConfessionsCarousel />
       </div>
     </footer>
   );
