@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 /** Illustrative thoughts only; private submissions never appear in this strip. */
 const THOUGHTS = [
@@ -14,67 +14,31 @@ const THOUGHTS = [
   "Maybe tomorrow will feel lighter.",
 ] as const;
 
-export function WhispersMarquee({
-  startOnView = false,
-  continuous = false,
-}: {
-  startOnView?: boolean;
-  continuous?: boolean;
-}) {
-  const stripRef = useRef<HTMLDivElement>(null);
-  const [started, setStarted] = useState(!startOnView);
+export function WhispersMarquee() {
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    if (!startOnView) return;
-    if (!("IntersectionObserver" in window) || !stripRef.current) {
-      setStarted(true);
-      return;
-    }
-
-    const observer = new IntersectionObserver((entries) => {
-      if (entries.some((entry) => entry.isIntersecting)) {
-        setStarted(true);
-        observer.disconnect();
-      }
-    });
-    observer.observe(stripRef.current);
-    return () => observer.disconnect();
-  }, [startOnView]);
-
-  useEffect(() => {
-    if (!started || continuous) return;
     const timer = window.setTimeout(() => setVisible(false), 10_000);
     return () => window.clearTimeout(timer);
-  }, [started, continuous]);
+  }, []);
 
   if (!visible) return null;
 
   return (
     <div
-      ref={stripRef}
       className="header-marquee overflow-hidden border-y border-primary/20"
-      style={{ animationPlayState: started ? "running" : "paused" }}
-      data-marquee={startOnView ? "bottom" : "top"}
-      data-continuous={continuous || undefined}
+      data-marquee="top"
       aria-hidden="true"
     >
-      <div
-        className="header-marquee-track flex w-max whitespace-nowrap"
-        style={{ animationPlayState: started ? "running" : "paused" }}
-      >
-        {(continuous ? [0, 1] : [0]).map((copy) => (
-          <div key={copy} className="flex shrink-0">
-            {THOUGHTS.map((thought) => (
-              <span
-                key={thought}
-                className="header-marquee-thought flex shrink-0 items-center gap-5 px-5 py-2 font-sans text-xs font-semibold tracking-wide text-cream/85 sm:text-sm"
-              >
-                <span className="size-1 shrink-0 rounded-full bg-primary/70" />
-                {thought}
-              </span>
-            ))}
-          </div>
+      <div className="header-marquee-track flex w-max whitespace-nowrap">
+        {THOUGHTS.map((thought) => (
+          <span
+            key={thought}
+            className="header-marquee-thought flex shrink-0 items-center gap-5 px-5 py-2 font-sans text-xs font-semibold tracking-wide text-cream/85 sm:text-sm"
+          >
+            <span className="size-1 shrink-0 rounded-full bg-primary/70" />
+            {thought}
+          </span>
         ))}
       </div>
     </div>

@@ -378,18 +378,24 @@ html[data-room-pending="true"] #release [data-room-view="form"] {
   will-change: transform;
 }
 
-.header-marquee[data-continuous="true"] {
-  animation: none;
-}
-
-.header-marquee[data-continuous="true"] .header-marquee-track {
-  animation: marquee-loop 45s linear infinite;
-}
-
 @keyframes marquee-loop {
   to {
     transform: translateX(-50%);
   }
+}
+
+.footer-confessions-track {
+  animation: marquee-loop 36s linear infinite;
+  animation-play-state: paused;
+  will-change: transform;
+}
+
+[data-started="true"] .footer-confessions-track {
+  animation-play-state: running;
+}
+
+.footer-confessions-window:hover .footer-confessions-track {
+  animation-play-state: paused;
 }
 
 @keyframes brand-heartbeat {
@@ -411,13 +417,16 @@ html[data-room-pending="true"] #release [data-room-view="form"] {
 
 @media (prefers-reduced-motion: reduce) {
   .header-marquee-track,
-  .header-marquee[data-continuous="true"] .header-marquee-track,
+  .footer-confessions-track,
   .brand-loader {
     animation: none;
     transform: none;
   }
   .header-marquee {
     animation: none;
+    overflow-x: auto;
+  }
+  .footer-confessions-window {
     overflow-x: auto;
   }
 }
