@@ -3,7 +3,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
-import { BrandLoader } from "@/components/BrandLoader";
 import { CrisisContacts } from "@/components/CrisisContacts";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,19 +29,14 @@ function Field({
   label,
   hint,
   children,
-  delay,
 }: {
   n: string;
   label: string;
   hint?: string;
   children: React.ReactNode;
-  delay: number;
 }) {
   return (
-    <div
-      style={{ animationDelay: `${250 + delay * 500}ms` }}
-      className="rise-in border-t border-cream/10 pt-5 first:border-t-0 first:pt-0"
-    >
+    <div className="border-t border-cream/10 pt-5 first:border-t-0 first:pt-0">
       <div className="flex items-baseline gap-3">
         <span className="font-mono text-[0.55rem] tracking-[0.24em] text-primary/60">{n}</span>
         <span className="font-mono text-[0.58rem] uppercase tracking-[0.26em] text-cream/85">
@@ -82,7 +76,7 @@ function Pill({
   );
 }
 
-/** The release panel that floats in once the city has turned crimson. */
+/** The release panel is present on the first paint for new visitors. */
 export function ReleaseForm({
   onReleased,
 }: {
@@ -170,7 +164,11 @@ export function ReleaseForm({
   };
 
   return (
-    <div ref={panelRef} className="release-glass rise-in mx-auto w-full max-w-2xl p-5 sm:p-8">
+    <div
+      ref={panelRef}
+      data-room-view="form"
+      className="release-glass mx-auto w-full max-w-2xl p-5 sm:p-8"
+    >
       <AnimatePresence mode="wait" initial={false}>
         {released ? (
           <motion.div
@@ -227,7 +225,6 @@ export function ReleaseForm({
                 n="01"
                 label="What happened, and what feels hardest right now?"
                 hint="Begin anywhere. What led up to this, and what is difficult to say? Please leave out names and contact details."
-                delay={0.15}
               >
                 <Textarea
                   value={content}
@@ -251,7 +248,6 @@ export function ReleaseForm({
                 n="02"
                 label="When does it feel hardest, and what have you tried?"
                 hint="Optional. Tell us how it affects your day and what has or has not helped."
-                delay={0.3}
               >
                 <Textarea
                   value={feelings}
@@ -268,7 +264,6 @@ export function ReleaseForm({
                 n="03"
                 label="What would you like us to understand or help with?"
                 hint="Optional. Is there more we should know? Tell us if you want listening, perspective, or a next step."
-                delay={0.45}
               >
                 <Textarea
                   value={support}
@@ -281,12 +276,7 @@ export function ReleaseForm({
                 />
               </Field>
 
-              <Field
-                n="04"
-                label="Where does it hurt?"
-                hint="Choose a topic if one fits."
-                delay={0.5}
-              >
+              <Field n="04" label="Where does it hurt?" hint="Choose a topic if one fits.">
                 <div role="group" aria-label="Where does it hurt?" className="flex flex-wrap gap-2">
                   {CATEGORIES.map((choice) => (
                     <Pill
@@ -304,7 +294,6 @@ export function ReleaseForm({
                 n="05"
                 label="What do you want back?"
                 hint="Choose the kind of support you want."
-                delay={0.56}
               >
                 <div
                   role="group"
@@ -350,12 +339,7 @@ export function ReleaseForm({
                 </div>
               </Field>
 
-              <Field
-                n="06"
-                label="How heavy is today?"
-                hint="Move the slider if a number helps."
-                delay={0.62}
-              >
+              <Field n="06" label="How heavy is today?" hint="Move the slider if a number helps.">
                 <div className="flex items-center justify-between gap-2 font-mono text-[0.55rem] uppercase tracking-[0.12em] text-muted-foreground">
                   <span>Very low</span>
                   <span className="text-primary" aria-live="polite">
@@ -385,7 +369,7 @@ export function ReleaseForm({
               </Field>
 
               {intent === "Advice" && (
-                <Field n="07" label="How long should your chat stay open?" delay={0.68}>
+                <Field n="07" label="How long should your chat stay open?">
                   <div
                     role="group"
                     aria-label="How long should your chat stay open?"
@@ -405,7 +389,7 @@ export function ReleaseForm({
               )}
             </div>
 
-            <div className="rise-in mt-8" style={{ animationDelay: "660ms" }}>
+            <div className="mt-8">
               <CrisisContacts className="mb-5" />
               {problem && (
                 <p role="alert" className="mb-4 text-center text-xs text-destructive">
@@ -415,11 +399,11 @@ export function ReleaseForm({
               <Button
                 onClick={submit}
                 disabled={loading}
+                aria-busy={loading}
                 size="lg"
-                className="group w-full rounded-full font-mono text-[0.68rem] uppercase tracking-[0.28em] glow-gold"
+                className="group min-h-12 w-full rounded-full font-sans text-base font-bold tracking-wide glow-gold sm:text-lg"
               >
-                {loading ? <BrandLoader size="small" label="Sending your story" /> : null}
-                {loading ? "Letting go…" : "Let it go"}
+                Let it Go
                 <ArrowRight className="size-4 transition-transform duration-300 group-hover:translate-x-1" />
               </Button>
               <p className="mt-3 text-center text-xs leading-relaxed text-muted-foreground">

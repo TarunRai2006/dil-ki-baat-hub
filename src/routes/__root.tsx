@@ -126,6 +126,7 @@ function RootShell({ children }: { children: ReactNode }) {
     <html lang="en">
       <head>
         <HeadContent />
+        <script src="/room-preflight.js" />
       </head>
       <body>
         {children}

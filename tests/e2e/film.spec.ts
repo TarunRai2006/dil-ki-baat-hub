@@ -17,7 +17,7 @@ test.describe("background film", () => {
     await mockSupabase(page);
   });
 
-  test("the poster and muted looping video ship in HTML while chat storage is checked", async ({
+  test("the poster, video and form ship in HTML without a loading panel", async ({
     request,
     page,
   }) => {
@@ -26,10 +26,10 @@ test.describe("background film", () => {
     const video = html.match(/<video[^>]*>/)![0];
     for (const attr of [/muted/, /autoPlay|autoplay/, /loop/, /playsInline|playsinline/])
       expect(video).toMatch(attr);
-    // The server cannot inspect this browser's private room key. Hold the form
-    // until hydration checks storage so it cannot flash over an active chat.
     expect(html).toMatch(/<main[^>]+id="release"/);
-    expect(html).toContain("Checking for your chat");
+    expect(html).toContain("What happened, and what feels hardest right now?");
+    expect(html).toContain("/room-preflight.js");
+    expect(html).not.toContain("Checking for your chat");
     await page.goto("/");
     await hydrated(page, "#release textarea");
   });

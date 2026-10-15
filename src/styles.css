@@ -267,6 +267,10 @@
     inset 0 1px 0 oklch(1 0 0 / 6%);
 }
 
+html[data-room-pending="true"] #release [data-room-view="form"] {
+  visibility: hidden;
+}
+
 @utility text-crimson-glow {
   color: oklch(0.72 0.21 28);
   text-shadow:

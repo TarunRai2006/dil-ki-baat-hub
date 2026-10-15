@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { MotionConfig } from "framer-motion";
 import { SmoothScroll } from "@/components/SmoothScroll";
@@ -8,7 +8,6 @@ import { BackgroundFilm } from "@/components/BackgroundFilm";
 import { SiteFooter } from "@/components/SiteFooter";
 import { ReleaseForm } from "@/components/city/ReleaseForm";
 import { ActiveChatView } from "@/components/city/ActiveChatView";
-import { BrandLoader } from "@/components/BrandLoader";
 import { WhispersMarquee } from "@/components/WhispersMarquee";
 import { forgetRoom, latestLiveRoom, ROOMS_KEY, type StoredRoom } from "@/lib/confession";
 import { installPushPromptOnFirstInteraction, subscribeToPush } from "@/lib/push-client";
@@ -43,19 +42,29 @@ export const Route = createFileRoute("/")({
  * Nothing waits on the video; if it cannot play, the poster stands in.
  */
 function City() {
-  // undefined means browser storage has not been checked yet. Never flash the
-  // form over an existing anonymous room during hydration.
-  const [room, setRoom] = useState<StoredRoom | null | undefined>(undefined);
+  const [room, setRoom] = useState<StoredRoom | null>(null);
+  const [storageChecked, setStorageChecked] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [welcomeIntent, setWelcomeIntent] = useState<"Advice" | "Express" | null>(null);
 
   // someone returning can reopen a chat that is still live (stored on this device only)
-  useEffect(() => {
-    setRoom((current) => current ?? latestLiveRoom());
+  useLayoutEffect(() => {
+    setRoom(latestLiveRoom());
+    setStorageChecked(true);
     const syncRoom = (event: StorageEvent) => {
       if (event.key === ROOMS_KEY || event.key === null) setRoom(latestLiveRoom());
     };
     window.addEventListener("storage", syncRoom);
+    return () => window.removeEventListener("storage", syncRoom);
+  }, []);
+
+  // A tiny pre-hydration check hides the server-rendered form only for a
+  // returning visitor. Reveal this space after React restores their chat.
+  useLayoutEffect(() => {
+    if (storageChecked) document.documentElement.removeAttribute("data-room-pending");
+  }, [storageChecked]);
+
+  useEffect(() => {
     // Reconcile an already granted browser subscription on a later visit.
     // This never prompts visitors who have not opted in.
     if ("Notification" in window && Notification.permission === "granted") {
@@ -63,7 +72,6 @@ function City() {
     }
     const removePushPrompt = installPushPromptOnFirstInteraction();
     return () => {
-      window.removeEventListener("storage", syncRoom);
       removePushPrompt();
     };
   }, []);
@@ -110,15 +118,7 @@ function City() {
           aria-label={room ? "Your private chat" : "Share your story anonymously"}
           className="relative z-40 flex min-h-svh items-start justify-center px-4 pb-20 pt-32 sm:items-center sm:pt-36"
         >
-          {room === undefined ? (
-            <div
-              className="release-glass mx-auto w-full max-w-2xl p-8 text-center text-sm text-muted-foreground"
-              role="status"
-            >
-              <BrandLoader size="large" label="Checking for your chat" />
-              <span className="mt-3 block">Checking for your chat…</span>
-            </div>
-          ) : room ? (
+          {room ? (
             <ActiveChatView
               room={room}
               showWelcome={showWelcome}

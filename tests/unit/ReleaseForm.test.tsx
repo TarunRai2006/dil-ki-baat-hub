@@ -200,7 +200,8 @@ describe("ReleaseForm", () => {
     const button = submit();
     await user.dblClick(button);
     expect(rpc).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole("button", { name: /letting go/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /let it go/i })).toBeDisabled();
+    expect(button).toHaveAttribute("aria-busy", "true");
     await act(async () => pending[0].resolve(ok()));
     expect(await screen.findByText("Congratulations!!!!!")).toBeInTheDocument();
     expect(screen.getByText("You let it go.")).toBeInTheDocument();
