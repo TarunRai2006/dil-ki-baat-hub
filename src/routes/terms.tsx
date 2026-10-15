@@ -26,8 +26,8 @@ const sections = [
   {
     title: "Who can use it",
     paragraphs: [
-      "You must be at least 13. By submitting a story, you confirm that you meet this age requirement and agree to these Terms of Service and this Privacy Policy. We do not collect or verify a date of birth or age band for new stories. If you are under 13, do not submit a story; speak with a trusted adult.",
-      "Visitors aged 13–17 must have a parent or guardian's permission before submitting. We do not currently verify that permission. Public sharing is off for all new stories. We are reviewing the additional safeguards needed for minors before public launch.",
+      "You must be at least 16. By submitting a story, you confirm that you meet this age requirement and agree to these Terms of Service and this Privacy Policy. We do not collect or verify a date of birth or age band for new stories. If you are under 16, do not submit a story; speak with a trusted adult.",
+      "Visitors aged 16–17 must have a parent or guardian's permission before submitting. We do not currently verify that permission. Public sharing is off for all new stories. We are reviewing the additional safeguards needed for minors before public launch.",
     ],
   },
   {
@@ -84,7 +84,7 @@ function Terms() {
         <div className="mt-7 rounded-2xl cream-card p-5">
           <p className="font-display text-xl">Before you share</p>
           <p className="mt-2 text-sm leading-6">
-            This is a 13+ listening space, not emergency care. Please leave real names and contact
+            This is a 16+ listening space, not emergency care. Please leave real names and contact
             details out of your story. Your chat can reopen on this browser until you end it or it
             expires. New stories are kept private from public display.
           </p>

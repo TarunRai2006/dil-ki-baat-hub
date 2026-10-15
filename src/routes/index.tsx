@@ -143,6 +143,7 @@ function City() {
         </main>
 
         <div className="relative z-40">
+          <WhispersMarquee startOnView />
           <SiteFooter />
         </div>
       </div>

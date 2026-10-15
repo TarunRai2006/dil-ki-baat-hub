@@ -423,7 +423,7 @@ export function ReleaseForm({
                 <ArrowRight className="size-4 transition-transform duration-300 group-hover:translate-x-1" />
               </Button>
               <p className="mt-3 text-center text-xs leading-relaxed text-muted-foreground">
-                By submitting, you confirm you are at least 13 and agree to our{" "}
+                By submitting, you confirm you are at least 16 and agree to our{" "}
                 <Link
                   to="/terms"
                   hash="terms"

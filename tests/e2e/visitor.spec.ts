@@ -40,7 +40,7 @@ test.describe("visitor journey", () => {
     expect(await logo.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
     await expect(page.getByRole("button", { name: "I am 18 or older" })).toHaveCount(0);
     await expect(page.getByRole("checkbox")).toHaveCount(0);
-    await expect(page.getByText(/by submitting, you confirm you are at least 13/i)).toBeVisible();
+    await expect(page.getByText(/by submitting, you confirm you are at least 16/i)).toBeVisible();
     await page.getByRole("button", { name: /let it go/i }).click();
     await expect(page.getByRole("alert")).toContainText(/one honest sentence/i);
     expect(calls.filter((call) => call.fn === "submit_confession_v6")).toHaveLength(0);
@@ -49,7 +49,7 @@ test.describe("visitor journey", () => {
   test("ticker shows ten illustrative thoughts instead of private words", async ({ page }) => {
     await mockSupabase(page);
     await openForm(page);
-    const ticker = page.locator(".header-marquee");
+    const ticker = page.locator('[data-marquee="top"]');
     await expect(ticker.locator(".header-marquee-thought")).toHaveCount(10);
     await expect(ticker).toContainText("I miss who I used to be.");
     await expect(ticker).not.toContainText("I finally told my sister");
@@ -58,6 +58,10 @@ test.describe("visitor journey", () => {
         .locator(".header-marquee-track")
         .evaluate((el) => getComputedStyle(el).animationName),
     ).toBe("none");
+    const footerTicker = page.locator('[data-marquee="bottom"]');
+    await footerTicker.scrollIntoViewIfNeeded();
+    await expect(footerTicker).toBeVisible();
+    await expect(footerTicker.locator(".header-marquee-thought")).toHaveCount(10);
   });
 
   test("header, logo and consent sentence fit common screen sizes", async ({ page }) => {
@@ -73,7 +77,7 @@ test.describe("visitor journey", () => {
       await page.setViewportSize({ width, height });
       await expect(page.getByRole("img", { name: "Dil Ki Baat Haven logo" })).toBeVisible();
       await expect(
-        page.getByText(/by submitting, you confirm you are at least 13/i),
+        page.getByText(/by submitting, you confirm you are at least 16/i),
       ).toBeAttached();
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth - innerWidth),

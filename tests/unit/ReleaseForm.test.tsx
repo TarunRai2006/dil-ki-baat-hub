@@ -60,7 +60,7 @@ describe("ReleaseForm", () => {
     expect(screen.queryByRole("button", { name: "Maybe" })).not.toBeInTheDocument();
     expect(rpc).not.toHaveBeenCalled();
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
-    expect(screen.getByText(/by submitting, you confirm you are at least 13/i)).toBeInTheDocument();
+    expect(screen.getByText(/by submitting, you confirm you are at least 16/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Terms of Service" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Privacy Policy" })).toBeInTheDocument();
   });

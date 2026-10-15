@@ -11,7 +11,9 @@ This repository contains the visitor site, admin dashboard, Supabase migrations,
 3. Submitting creates one private story and a token-protected chat. The completion dialog puts “Congratulations!!!!!” and “You let it go.” on separate lines. The counsellor note appears only for the advice choice.
 4. While a chat is active, it replaces the form. The browser stores the room token locally, so the visitor can reopen that chat after refreshing or returning in the **same browser profile and origin**. There is no account, recovery code, or access from another device. Ending the chat deletes its live messages and returns the form; the original story remains for moderation.
 
-New stories are **private by default**. The current form has no public sharing choice. Historical stories may still be eligible for public excerpts if they had the earlier consent and were approved and featured. The Terms of Service state a minimum age of 13 and require parent or guardian permission for visitors aged 13–17; the application does not verify that permission. Review those safeguards before a public launch.
+The moving thought strips above the form and above the footer use ten fixed sample lines, never private submissions. Each runs for ten seconds; the footer strip starts when it enters view.
+
+New stories are **private by default**. The current form has no public sharing choice. Historical stories may still be eligible for public excerpts if they had the earlier consent and were approved and featured. The Terms of Service state a minimum age of 16 and require parent or guardian permission for visitors aged 16–17; the application does not verify that permission. Review those safeguards before a public launch.
 
 ## Admin dashboard
 
@@ -134,7 +136,7 @@ npm run test:e2e
 1. Choose the intended Supabase project and verify its ref in `supabase/config.toml` and your local environment before linking or pushing migrations. Apply migrations in order with `npx supabase db push`. Do not load `supabase/seed.sql` into production.
 2. Configure the public Supabase values and VAPID public key for the build. Configure the service-role key, VAPID private key, subject, and rate-limit secret **only** in the server runtime.
 3. Create approved professional accounts and grant `admin` through the owner-controlled Supabase process. Disable public account sign-up if it is not needed.
-4. Review the 13–17 guardian-permission process, retention policy, crisis copy, Terms, and any regional legal requirements before opening the site publicly. The current form does not verify age or guardian permission.
+4. Review the 16–17 guardian-permission process, retention policy, crisis copy, Terms, and any regional legal requirements before opening the site publicly. The current form does not verify age or guardian permission.
 5. Test a real submission, return to chat in the same browser, End chat, admin moderation, and a browser push notification on the deployed HTTPS origin.
 
 This project was built with [Lovable](https://lovable.dev). Pushing a commit to a connected branch can sync it back into Lovable; preserve published Git history.

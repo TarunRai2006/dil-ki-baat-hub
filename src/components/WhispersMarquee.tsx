@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /** Illustrative thoughts only; private submissions never appear in this strip. */
 const THOUGHTS = [
@@ -14,19 +14,48 @@ const THOUGHTS = [
   "Maybe tomorrow will feel lighter.",
 ] as const;
 
-export function WhispersMarquee() {
+export function WhispersMarquee({ startOnView = false }: { startOnView?: boolean }) {
+  const stripRef = useRef<HTMLDivElement>(null);
+  const [started, setStarted] = useState(!startOnView);
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
+    if (!startOnView) return;
+    if (!("IntersectionObserver" in window) || !stripRef.current) {
+      setStarted(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        setStarted(true);
+        observer.disconnect();
+      }
+    });
+    observer.observe(stripRef.current);
+    return () => observer.disconnect();
+  }, [startOnView]);
+
+  useEffect(() => {
+    if (!started) return;
     const timer = window.setTimeout(() => setVisible(false), 10_000);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [started]);
 
   if (!visible) return null;
 
   return (
-    <div className="header-marquee overflow-hidden border-t border-cream/10" aria-hidden="true">
-      <div className="header-marquee-track flex w-max whitespace-nowrap">
+    <div
+      ref={stripRef}
+      className="header-marquee overflow-hidden border-y border-primary/20"
+      style={{ animationPlayState: started ? "running" : "paused" }}
+      data-marquee={startOnView ? "bottom" : "top"}
+      aria-hidden="true"
+    >
+      <div
+        className="header-marquee-track flex w-max whitespace-nowrap"
+        style={{ animationPlayState: started ? "running" : "paused" }}
+      >
         {THOUGHTS.map((thought) => (
           <span
             key={thought}

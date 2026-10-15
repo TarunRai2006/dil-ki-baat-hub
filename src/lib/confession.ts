@@ -108,7 +108,7 @@ const FRIENDLY: Record<string, string> = {
   invalid_highlight: "Please choose whether we can share it.",
   invalid_nickname: `Nicknames can be up to ${NICKNAME_MAX} characters.`,
   invalid_chat: "Please choose how long the chat should last.",
-  invalid_age_group: "You must be at least 13 to submit.",
+  invalid_age_group: "You must be at least 16 to submit.",
   minor_public_sharing_disabled: "Public sharing is off for minors.",
   public_sharing_disabled: "Public sharing is currently off for everyone.",
   consent_required: "Submission requires agreement to the Terms of Service and Privacy Policy.",
