@@ -2,13 +2,7 @@ import { z } from "zod";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
-import {
-  CATEGORIES,
-  HIGHLIGHT_OPTIONS,
-  INTENTS,
-  TTL_OPTIONS,
-  getAnonUserId,
-} from "@/lib/dilkibaat";
+import { CATEGORIES, getAnonUserId } from "@/lib/dilkibaat";
 
 /* ------------------------------------------------------------------ types */
 
@@ -49,11 +43,9 @@ export const NICKNAME_MAX = 40;
 export const MESSAGE_MAX = 1000;
 export const NOTES_MAX = 5000;
 
-const categoryList = CATEGORIES as unknown as [string, ...string[]];
-
 /**
- * Client-side mirror of the database rules in `submit_confession`. It only
- * exists for instant feedback; the database re-checks every field.
+ * Client-side mirror of the written intake and optional check-in. The
+ * database re-checks each value and owns the private chat settings.
  */
 /** Postgres text cannot store NUL; drop it and other control characters, keeping tab and line breaks. */
 const stripControls = (v: string) =>
@@ -75,24 +67,20 @@ export const confessionSchema = z.object({
         .min(CONTENT_MIN, "Even one honest sentence is enough — but we need something to hold.")
         .max(CONTENT_MAX, `Please keep it under ${CONTENT_MAX} characters.`),
     ),
-  // one category, or up to four joined with commas (the older multi-select forms)
-  category: z.string().refine((v) => {
-    const parts = v.split(",").map((p) => p.trim());
-    return parts.length >= 1 && parts.length <= 4 && parts.every((p) => categoryList.includes(p));
-  }, "Please pick where it hurts from the list."),
-  intent: z.enum(INTENTS.map((i) => i.value) as [string, ...string[]]),
-  emotional_state: z.number().int().min(1).max(5),
+  category: z.enum(CATEGORIES).nullable().optional(),
+  intent: z.enum(["Advice", "Express", "Both"]).nullable().optional(),
+  emotional_state: z.number().int().min(1).max(5).nullable().optional(),
   community_question: z
     .string()
-    .trim()
-    .max(QUESTION_MAX, `Keep the question under ${QUESTION_MAX} characters.`),
-  highlight_on_instagram: z.enum(HIGHLIGHT_OPTIONS as unknown as [string, ...string[]]),
+    .transform(stripControls)
+    .pipe(z.string().trim().max(QUESTION_MAX))
+    .optional(),
   nickname: z
     .string()
-    .trim()
-    .max(NICKNAME_MAX, `Nicknames can be up to ${NICKNAME_MAX} characters.`),
-  chat_enabled: z.boolean(),
-  chat_ttl: z.enum(TTL_OPTIONS.map((t) => t.value) as [string, ...string[]]),
+    .transform(stripControls)
+    .pipe(z.string().trim().max(NICKNAME_MAX))
+    .optional(),
+  chat_ttl: z.enum(["1h", "24h", "never"]).optional(),
 });
 export type ConfessionInput = z.input<typeof confessionSchema>;
 
@@ -113,14 +101,20 @@ const FRIENDLY: Record<string, string> = {
   rate_limited:
     "You have shared a lot in a short time. Take a breath and try again in a few minutes.",
   invalid_content: "Your words need to be between 10 and 2000 characters.",
-  invalid_category: "Please pick where it hurts from the list.",
-  invalid_intent: "Please choose what you want back.",
-  invalid_emotional_state: "Please set how heavy today feels.",
+  invalid_category: "Please choose a main topic from the list.",
+  invalid_intent: "Please choose the support you want.",
+  invalid_emotional_state: "Please choose how you feel today.",
   invalid_question: `Keep the question under ${QUESTION_MAX} characters.`,
   invalid_highlight: "Please choose whether we can share it.",
   invalid_nickname: `Nicknames can be up to ${NICKNAME_MAX} characters.`,
   invalid_chat: "Please choose how long the chat should last.",
+  invalid_age_group: "You must be at least 16 to submit.",
+  minor_public_sharing_disabled: "Public sharing is off for minors.",
+  public_sharing_disabled: "Public sharing is currently off for everyone.",
+  consent_required: "Submission requires agreement to the Terms of Service and Privacy Policy.",
   invalid_request: "Something about that request was off. Please refresh and try again.",
+  active_chat_exists:
+    "You already have an active chat on this browser. Open it before starting another story.",
   message_empty: "Write something first.",
   message_too_long: `Messages can be up to ${MESSAGE_MAX} characters.`,
   room_expired: "This chat has ended. It disappeared as promised.",
@@ -139,6 +133,7 @@ export function errorCode(err: unknown): string | null {
   if (match && match[0] in FRIENDLY) return match[0];
   if ("name" in err && err.name === "AbortError") return "timeout";
   if (/fetch|network|Failed to fetch|NetworkError|Load failed/i.test(message)) return "network";
+  if ("code" in err && err.code === "PGRST202") return "missing_submission_function";
   if ("code" in err && (err.code === "42501" || err.code === "PGRST301")) return "not_authorized";
   return null;
 }
@@ -152,6 +147,8 @@ export function friendlyError(
   if (code === "timeout") return "This is taking too long. Check your connection and try again.";
   if (code === "network")
     return "We could not reach the server. Check your connection and try again.";
+  if (code === "missing_submission_function")
+    return "Submissions are temporarily unavailable because the site needs an update. Please try again later.";
   if (code && FRIENDLY[code]) return FRIENDLY[code];
   return fallback;
 }
@@ -182,18 +179,17 @@ export async function submitConfession(
 ): Promise<SubmitResult> {
   const data = confessionSchema.parse(input);
   const { data: rows, error } = await supabase
-    .rpc("submit_confession", {
+    .rpc("submit_confession_v6", {
       _content: data.content,
-      _category: data.category,
-      _intent: data.intent,
-      _emotional_state: data.emotional_state,
-      _community_question: data.community_question,
-      _highlight_on_instagram: data.highlight_on_instagram,
-      _nickname: data.nickname,
-      _chat_enabled: data.chat_enabled,
-      _chat_ttl: data.chat_ttl,
       _anon_user_id: getAnonUserId(),
       _client_request_id: requestId,
+      _consent_confirmed: true,
+      _intent: data.intent ?? null,
+      _emotional_state: data.emotional_state ?? null,
+      _category: data.category ?? null,
+      _community_question: data.community_question ?? "",
+      _nickname: data.nickname ?? "",
+      _chat_ttl: data.chat_ttl ?? "never",
     })
     .abortSignal(timeoutSignal(15_000));
   if (error) throw error;
@@ -210,6 +206,7 @@ export async function submitConfession(
     };
     saveRoom(room);
   }
+  if (!room) throw new Error("invalid_request");
   return { submissionId: row.submission_id, alias: row.alias, room };
 }
 
@@ -223,7 +220,7 @@ export type StoredRoom = {
   expiresAt: string | null;
 };
 
-const ROOMS_KEY = "dkb_chat_rooms";
+export const ROOMS_KEY = "dkb_chat_rooms";
 
 function readRooms(): StoredRoom[] {
   if (typeof window === "undefined") return [];
@@ -264,6 +261,15 @@ export function forgetRoom(roomId: string) {
   }
 }
 
+/** End a room on the server before removing its access token from this browser. */
+export async function endChatRoom(room: StoredRoom): Promise<void> {
+  const { error } = await supabase
+    .rpc("end_chat_room", { _room_id: room.roomId, _token: room.token })
+    .abortSignal(timeoutSignal(12_000));
+  if (error) throw error;
+  forgetRoom(room.roomId);
+}
+
 /** Most recent room that has not passed its expiry (the server still decides). */
 export function latestLiveRoom(): StoredRoom | null {
   const now = Date.now();
@@ -274,7 +280,7 @@ export function latestLiveRoom(): StoredRoom | null {
 
 /**
  * Words the public may read: only confessions whose writers said "Yes" to
- * anonymous sharing, that a mentor approved and featured. Excerpts only.
+ * anonymous sharing, that a counsellor or therapist approved and featured. Excerpts only.
  */
 export async function fetchWhispers(): Promise<string[]> {
   const { data, error } = await supabase

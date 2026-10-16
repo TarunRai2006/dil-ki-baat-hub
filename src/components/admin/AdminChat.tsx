@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Eye, EyeOff, FileText, Loader2, Lock, Send } from "lucide-react";
+import { Eye, EyeOff, FileText, Lock, Send } from "lucide-react";
+import { BrandLoader } from "@/components/BrandLoader";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -82,7 +83,7 @@ function roomEnds(r: AdminRoom) {
   return `${new Date(r.expires_at).getTime() > Date.now() ? "ends" : "ended"} ${fmt(r.expires_at)}`;
 }
 
-/** Mentor side of the chats: live and ended rooms, replies, hide/unhide, close. */
+/** Counsellor and therapist side of the chats: live and ended rooms, replies, hide/unhide, close. */
 export function AdminChat({
   activeRoom,
   onSelectRoom,
@@ -413,7 +414,7 @@ export function AdminChat({
                   <Input
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
-                    placeholder="Reply as mentor…"
+                    placeholder="Reply as a counsellor or therapist…"
                     maxLength={MESSAGE_MAX}
                     aria-label="Reply"
                   />
@@ -424,7 +425,7 @@ export function AdminChat({
                     aria-label="Send reply"
                   >
                     {send.isPending ? (
-                      <Loader2 className="size-4 animate-spin" />
+                      <BrandLoader size="small" label="Sending reply" />
                     ) : (
                       <Send className="size-4" />
                     )}

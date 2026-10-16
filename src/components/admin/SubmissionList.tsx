@@ -122,12 +122,18 @@ export function SubmissionList({
                 {row.content}
               </span>
             </span>
-            <span className="mt-2 inline-block text-xs text-cream/80 lg:mt-0">{row.category}</span>
-            <span className="ml-3 text-xs text-cream/80 lg:ml-0">
-              {INTENTS.find((i) => i.value === row.intent)?.label ?? row.intent}
+            <span className="mt-2 inline-block text-xs text-cream/80 lg:mt-0">
+              {row.category ?? "Not asked"}
             </span>
             <span className="ml-3 text-xs text-cream/80 lg:ml-0">
-              {row.emotional_state}/5 · {MOOD_LABELS[row.emotional_state]}
+              {row.intent
+                ? (INTENTS.find((i) => i.value === row.intent)?.label ?? row.intent)
+                : "Not asked"}
+            </span>
+            <span className="ml-3 text-xs text-cream/80 lg:ml-0">
+              {row.emotional_state === null
+                ? "Not asked"
+                : `${row.emotional_state}/5 · ${MOOD_LABELS[row.emotional_state]}`}
             </span>
             <span className="mt-2 flex items-center gap-2 lg:mt-0">
               <Badge variant="outline" className={STATUS_TONE[row.status]}>

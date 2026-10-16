@@ -11,6 +11,7 @@ import { SubmissionFilters } from "@/components/admin/SubmissionFilters";
 import { SubmissionList } from "@/components/admin/SubmissionList";
 import { SubmissionDetail } from "@/components/admin/SubmissionDetail";
 import { AdminChat } from "@/components/admin/AdminChat";
+import { PushNotifications } from "@/components/admin/PushNotifications";
 import {
   DEFAULT_FILTERS,
   adminSession,
@@ -34,11 +35,10 @@ export const Route = createFileRoute("/_authenticated/admin")({
   },
   head: () => ({
     meta: [
-      { title: "Mentor Dashboard | Dil Ki Baat" },
+      { title: "Counsellor & Therapist Dashboard | Dil Ki Baat" },
       {
         name: "description",
-        content:
-          "Review anonymous submissions, track the emotional pulse index and reply to live disappearing chats.",
+        content: "Review anonymous submissions and reply to private live chats.",
       },
       { name: "robots", content: "noindex, nofollow" },
     ],
@@ -193,7 +193,9 @@ function AdminPage() {
   if (!isAdmin) {
     return (
       <div className="mx-auto max-w-md px-5 py-24 text-center">
-        <h1 className="font-display text-3xl text-primary">Mentor access required</h1>
+        <h1 className="font-display text-3xl text-primary">
+          Counsellor or therapist access required
+        </h1>
         <p className="mt-3 text-sm text-muted-foreground">
           Your account is signed in but doesn&apos;t have the admin role yet. Ask a Dil Ki Baat
           owner to grant it.
@@ -213,7 +215,9 @@ function AdminPage() {
     <div className="mx-auto max-w-7xl px-5 pb-16 pt-[max(2rem,env(safe-area-inset-top))]">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-display text-4xl text-gradient-gold">Mentor Dashboard</h1>
+          <h1 className="font-display text-4xl text-gradient-gold">
+            Counsellor &amp; Therapist Dashboard
+          </h1>
           <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
             Dil Ki Baat · aapkamentor.ai
             <span className="inline-flex items-center gap-1.5 font-mono text-[0.58rem] uppercase tracking-[0.2em]">
@@ -257,6 +261,10 @@ function AdminPage() {
       <Tabs value={tab} onValueChange={setTab} className="mt-8">
         <TabsList>
           <TabsTrigger value="submissions">Submissions</TabsTrigger>
+          <TabsTrigger value="push">
+            <span className="sm:hidden">Push</span>
+            <span className="hidden sm:inline">Push Notifications</span>
+          </TabsTrigger>
           <TabsTrigger value="chats" className="gap-2">
             Chats
             {(liveRooms.data?.length ?? 0) > 0 && (
@@ -314,6 +322,9 @@ function AdminPage() {
             seen={seen}
             onSeen={markSeen}
           />
+        </TabsContent>
+        <TabsContent value="push" className="mt-4">
+          <PushNotifications />
         </TabsContent>
       </Tabs>
 

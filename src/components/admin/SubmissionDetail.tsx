@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Archive, ArchiveRestore, Loader2, MessageCircle, Star, Trash2, Undo2 } from "lucide-react";
+import { Archive, ArchiveRestore, MessageCircle, Star, Trash2, Undo2 } from "lucide-react";
+import { BrandLoader } from "@/components/BrandLoader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -82,7 +83,7 @@ export function SubmissionDetail({
     queryFn: () => fetchModerationLog(id!),
   });
 
-  // Notes draft vs. the database. Another mentor (or tab) may save notes while
+  // Notes draft vs. the database. Another care team member (or tab) may save notes while
   // this one is typing: never overwrite an unsaved draft, flag the conflict.
   const [notes, setNotes] = useState("");
   const [notesConflict, setNotesConflict] = useState(false);
@@ -197,6 +198,7 @@ export function SubmissionDetail({
               <Badge variant="outline" className={STATUS_TONE[s.status]}>
                 {s.status}
               </Badge>
+              {s.age_group === "16-17" && <Badge variant="secondary">16–17 · keep private</Badge>}
               {s.is_featured && (
                 <Badge variant="outline" className="border-primary/50 text-primary">
                   <Star className="mr-1 size-3 fill-primary" aria-hidden="true" /> Featured
@@ -208,10 +210,17 @@ export function SubmissionDetail({
 
             <dl>
               <Row label="Date">{new Date(s.created_at).toLocaleString()}</Row>
-              <Row label="Category">{s.category}</Row>
-              <Row label="Type">{INTENTS.find((i) => i.value === s.intent)?.label ?? s.intent}</Row>
+              <Row label="Declared age">{s.age_group ?? "Not recorded"}</Row>
+              <Row label="Category">{s.category ?? "Not asked"}</Row>
+              <Row label="Type">
+                {s.intent
+                  ? (INTENTS.find((i) => i.value === s.intent)?.label ?? s.intent)
+                  : "Not asked"}
+              </Row>
               <Row label="Emotional state">
-                {s.emotional_state}/5 · {MOOD_LABELS[s.emotional_state] ?? "—"}
+                {s.emotional_state === null
+                  ? "Not asked"
+                  : `${s.emotional_state}/5 · ${MOOD_LABELS[s.emotional_state] ?? "—"}`}
               </Row>
               <Row label="Nickname">
                 {s.nickname ?? <span className="text-muted-foreground">None</span>}
@@ -238,7 +247,7 @@ export function SubmissionDetail({
 
             <section>
               <h3 className="font-mono text-[0.6rem] uppercase tracking-[0.24em] text-primary/80">
-                Community question
+                Question for counsellor or therapist
               </h3>
               <p className="mt-2 text-sm italic text-cream/85">
                 {s.community_question ?? (
@@ -367,7 +376,7 @@ export function SubmissionDetail({
                 onChange={(e) => setNotes(e.target.value)}
                 maxLength={NOTES_MAX}
                 rows={4}
-                placeholder="Private to mentors. Never shown to the writer."
+                placeholder="Private to counsellors and therapists. Never shown to the writer."
                 className="mt-2 border-cream/12 bg-background/40 text-sm"
               />
               {notesConflict && (
@@ -375,8 +384,8 @@ export function SubmissionDetail({
                   role="status"
                   className="mt-2 rounded-lg border border-ember/40 bg-ember/10 px-3 py-2 text-xs text-cream/90"
                 >
-                  Another mentor changed these notes while you were editing. Saving will replace
-                  their version with yours.{" "}
+                  Another counsellor or therapist changed these notes while you were editing. Saving
+                  will replace their version with yours.{" "}
                   <button type="button" className="underline" onClick={takeServerNotes}>
                     Use their version
                   </button>
@@ -393,7 +402,7 @@ export function SubmissionDetail({
                   disabled={busy || !notesDirty}
                   onClick={() => mutation.mutate({ admin_notes: notes })}
                 >
-                  {busy && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
+                  {busy && <BrandLoader size="small" label="Saving notes" />}
                   Save notes
                 </Button>
               </div>

@@ -20,7 +20,7 @@ Supabase project.
 - `supabase/seed.sql` – local database fixtures: every status, archived and trashed
   rows, one consented featured whisper, a live chat room (token `a` × 48) and an
   expired one. Loaded automatically by `supabase start` / `supabase db reset`.
-- `scripts/seed-admin.mjs` – creates a local mentor login. Refuses non-local URLs.
+- `scripts/seed-admin.mjs` – creates a local counsellor or therapist login. Refuses non-local URLs.
 
 ## Running the live suite
 

@@ -52,7 +52,7 @@ export const DEFAULT_FILTERS: SubmissionFilters = {
  */
 const LIST_COLUMNS =
   "id, created_at, updated_at, content, category, intent, emotional_state, highlight_on_instagram, nickname, alias, chat_enabled, status, is_featured, is_archived, deleted_at";
-const DETAIL_COLUMNS = `${LIST_COLUMNS}, community_question, chat_ttl, admin_notes, reviewed_at, reviewed_by`;
+const DETAIL_COLUMNS = `${LIST_COLUMNS}, age_group, community_question, chat_ttl, admin_notes, reviewed_at, reviewed_by`;
 
 export type AdminSubmission = Omit<
   Confession,
@@ -264,7 +264,7 @@ export type AdminRoom = {
   created_at: string;
   expires_at: string | null;
   last_message_at: string | null;
-  submissions: { alias: string; content: string; category: string } | null;
+  submissions: { alias: string; content: string; category: string | null } | null;
   chat_messages: { count: number }[];
   /** the newest message only (embedded, so the list is still one request) */
   last: { message: string; sender_type: string; created_at: string }[];
@@ -304,7 +304,7 @@ export async function setMessageHidden(id: string, hidden: boolean) {
 export const adminSession = { leaving: false };
 
 /**
- * When this mentor last read each room, kept on this device only (a reading
+ * When this care team member last read each room, kept on this device only (a reading
  * aid, not data: losing it just shows rooms as unread again).
  */
 const SEEN_KEY = "dkb_admin_seen";
@@ -328,7 +328,7 @@ export function saveSeen(seen: SeenMap) {
   }
 }
 
-/** A room is unread when the visitor spoke last, after the mentor last looked. */
+/** A room is unread when the visitor spoke last, after the care team member last looked. */
 export function isUnread(room: AdminRoom, seen: SeenMap) {
   const last = room.last[0];
   return !!last && last.sender_type === "user" && last.created_at > (seen[room.id] ?? "");

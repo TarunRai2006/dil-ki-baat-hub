@@ -22,9 +22,9 @@ const {
 const respond = (data: unknown, error: unknown = null) =>
   rpc.mockReturnValueOnce({ abortSignal: () => Promise.resolve({ data, error }) });
 
-describe("confessionSchema (client mirror of submit_confession)", () => {
-  it("accepts a fully filled, valid form", () => {
-    expect(confessionSchema.safeParse(validConfession).success).toBe(true);
+describe("confessionSchema (written intake)", () => {
+  it("accepts a valid written story", () => {
+    expect(confessionSchema.safeParse({ content: validConfession.content }).success).toBe(true);
   });
 
   it("trims surrounding whitespace but keeps line breaks inside", () => {
@@ -61,16 +61,6 @@ describe("confessionSchema (client mirror of submit_confession)", () => {
   });
 
   it.each([
-    ["unknown category", { category: "Hacking" }],
-    ["five categories", { category: "Career, Family, Anxiety, Other, Confusion" }],
-    ["bad intent", { intent: "Admin" }],
-    ["mood 0", { emotional_state: 0 }],
-    ["mood 6", { emotional_state: 6 }],
-    ["fractional mood", { emotional_state: 2.5 }],
-    ["bad highlight", { highlight_on_instagram: "Sure" }],
-    ["bad ttl", { chat_ttl: "forever" }],
-    ["long nickname", { nickname: "n".repeat(41) }],
-    ["long question", { community_question: "q".repeat(201) }],
     ["number instead of text", { content: 12345678901 }],
     ["object instead of text", { content: { evil: true } }],
     ["null content", { content: null }],
@@ -78,11 +68,28 @@ describe("confessionSchema (client mirror of submit_confession)", () => {
     expect(confessionSchema.safeParse({ ...validConfession, ...patch }).success).toBe(false);
   });
 
-  it("accepts up to four categories from the list (older multi-select forms)", () => {
+  it("keeps restored private choices and drops the former public-sharing input", () => {
+    expect(confessionSchema.parse(validConfession)).toEqual({
+      content: validConfession.content,
+      category: "Career",
+      intent: "Advice",
+      emotional_state: 2,
+      community_question: "Should I talk to my manager?",
+      nickname: "Tired Owl",
+      chat_ttl: "24h",
+    });
+    expect(confessionSchema.parse({ content: validConfession.content })).toEqual({
+      content: validConfession.content,
+    });
+  });
+
+  it("rejects invalid check-in answers", () => {
     expect(
-      confessionSchema.safeParse({ ...validConfession, category: "Career, Family, Anxiety, Other" })
-        .success,
-    ).toBe(true);
+      confessionSchema.safeParse({ content: validConfession.content, intent: "Publish" }).success,
+    ).toBe(false);
+    expect(
+      confessionSchema.safeParse({ content: validConfession.content, emotional_state: 6 }).success,
+    ).toBe(false);
   });
 });
 
@@ -125,12 +132,19 @@ describe("friendlyError: never show raw database errors", () => {
       "not_authorized",
     );
   });
+
+  it("explains when the submission function has not been deployed", () => {
+    const error = { code: "PGRST202", message: "Could not find the function" };
+    expect(errorCode(error)).toBe("missing_submission_function");
+    expect(friendlyError(error)).toMatch(/submissions are temporarily unavailable/i);
+    expect(friendlyError(error)).not.toContain("Could not find the function");
+  });
 });
 
 describe("submitConfession", () => {
   beforeEach(() => rpc.mockReset());
 
-  it("sends every field to submit_confession with the request id, and stores the room", async () => {
+  it("sends a private submission with confirmation and stores the room", async () => {
     respond([
       {
         submission_id: "s1",
@@ -142,19 +156,30 @@ describe("submitConfession", () => {
     ]);
     const result = await submitConfession(validConfession, "req-1");
     const [fn, args] = rpc.mock.calls[0];
-    expect(fn).toBe("submit_confession");
+    expect(fn).toBe("submit_confession_v6");
     expect(args).toMatchObject({
       _content: validConfession.content,
-      _category: "Career",
+      _client_request_id: "req-1",
+      _consent_confirmed: true,
       _intent: "Advice",
       _emotional_state: 2,
+      _category: "Career",
       _community_question: "Should I talk to my manager?",
-      _highlight_on_instagram: "Yes",
       _nickname: "Tired Owl",
-      _chat_enabled: true,
       _chat_ttl: "24h",
-      _client_request_id: "req-1",
     });
+    expect(Object.keys(args).sort()).toEqual([
+      "_anon_user_id",
+      "_category",
+      "_chat_ttl",
+      "_client_request_id",
+      "_community_question",
+      "_consent_confirmed",
+      "_content",
+      "_emotional_state",
+      "_intent",
+      "_nickname",
+    ]);
     expect(typeof args._anon_user_id).toBe("string");
     expect(result.room?.roomId).toBe("r1");
     expect(latestLiveRoom()?.token).toBe("t".repeat(48));
@@ -165,6 +190,27 @@ describe("submitConfession", () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
+  it("sends null for unanswered optional choices", async () => {
+    respond([
+      {
+        submission_id: "s3",
+        alias: "A",
+        room_id: "r3",
+        room_token: "u".repeat(48),
+        room_expires_at: null,
+      },
+    ]);
+    await submitConfession({ content: validConfession.content }, "req-optional");
+    expect(rpc.mock.calls[0][1]).toMatchObject({
+      _category: null,
+      _intent: null,
+      _emotional_state: null,
+      _community_question: "",
+      _nickname: "",
+      _chat_ttl: "never",
+    });
+  });
+
   it("surfaces the server error (the form turns it into friendly text)", async () => {
     respond(null, { message: "rate_limited" });
     await expect(submitConfession(validConfession, "req-2")).rejects.toMatchObject({
@@ -172,12 +218,13 @@ describe("submitConfession", () => {
     });
   });
 
-  it("does not create a room when chat was not requested", async () => {
+  it("rejects a server response without the required chat room", async () => {
     respond([
       { submission_id: "s2", alias: "A", room_id: null, room_token: null, room_expires_at: null },
     ]);
-    const result = await submitConfession({ ...validConfession, chat_enabled: false }, "req-3");
-    expect(result.room).toBeNull();
+    await expect(submitConfession({ content: validConfession.content }, "req-3")).rejects.toThrow(
+      "invalid_request",
+    );
     expect(latestLiveRoom()).toBeNull();
   });
 });

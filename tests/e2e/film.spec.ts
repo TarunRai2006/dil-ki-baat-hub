@@ -4,7 +4,7 @@ import { hydrated, mockSupabase } from "./support/supabase";
 /** Types into the form and checks the keystrokes land (the film never blocks input). */
 async function formWorks(page: Page) {
   await hydrated(page, "#release textarea");
-  const box = page.getByLabel("What is on your mind?");
+  const box = page.getByLabel("What happened, and what feels hardest right now?");
   await box.fill("typing while the film plays");
   await expect(box).toHaveValue("typing while the film plays");
 }
@@ -17,21 +17,26 @@ test.describe("background film", () => {
     await mockSupabase(page);
   });
 
-  test("the form, poster and muted looping video are all in the server HTML", async ({
+  test("the poster, video and form ship in HTML without a loading panel", async ({
     request,
+    page,
   }) => {
     const html = await (await request.get("/")).text();
-    expect(html).toMatch(/<img[^>]+src="\/media\/intro-poster\.webp"/);
+    expect(html).toMatch(/<img[^>]+src="\/media\/city-film-poster-v2\.webp"/);
     const video = html.match(/<video[^>]*>/)![0];
     for (const attr of [/muted/, /autoPlay|autoplay/, /loop/, /playsInline|playsinline/])
       expect(video).toMatch(attr);
-    // nothing to wait for: the form ships with the first paint
     expect(html).toMatch(/<main[^>]+id="release"/);
-    expect(html).toMatch(/<textarea/);
+    expect(html).toContain("What happened, and what feels hardest right now?");
+    expect(html).toContain("/room-preflight.js");
+    expect(html).not.toContain("Checking for your chat");
+    await page.goto("/");
+    await hydrated(page, "#release textarea");
   });
 
   test("film plays behind the form, covers the viewport, and never takes input", async ({
     page,
+    isMobile,
   }) => {
     await page.goto("/");
     await page.waitForFunction(
@@ -42,6 +47,10 @@ test.describe("background film", () => {
       undefined,
       { timeout: 180_000 },
     );
+    const selectedVideo = await page
+      .locator(".film-bg video")
+      .evaluate((v: HTMLVideoElement) => v.currentSrc);
+    expect(selectedVideo).toContain(isMobile ? "city-film-mobile-v2.mp4" : "city-film-v2.mp4");
     const box = (await page.locator(".film-bg video").boundingBox())!;
     const vp = page.viewportSize()!;
     expect(box.x).toBeLessThanOrEqual(0);
@@ -52,7 +61,9 @@ test.describe("background film", () => {
       true,
     );
     // the form is what sits under the pointer, not the film
-    const ta = (await page.getByLabel("What is on your mind?").boundingBox())!;
+    const ta = (await page
+      .getByLabel("What happened, and what feels hardest right now?")
+      .boundingBox())!;
     const hit = await page.evaluate(
       ([x, y]) => document.elementFromPoint(x, y)?.tagName,
       [ta.x + ta.width / 2, ta.y + ta.height / 2],
@@ -61,6 +72,24 @@ test.describe("background film", () => {
     expect(await page.evaluate(() => document.documentElement.style.overflow)).toBe("");
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBe(0);
     await formWorks(page);
+  });
+
+  test("the film keeps playing across a loop", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForFunction(
+      () => (document.querySelector<HTMLVideoElement>(".film-bg video")?.currentTime ?? 0) > 8,
+      undefined,
+      { timeout: 60_000 },
+    );
+    await page.waitForFunction(
+      () => {
+        const v = document.querySelector<HTMLVideoElement>(".film-bg video");
+        return !!v && v.currentTime < 2 && !v.paused;
+      },
+      undefined,
+      { timeout: 30_000 },
+    );
+    await expect(page.locator(".film-frame[data-ready]")).toBeVisible();
   });
 
   test("a film that cannot load leaves the poster and a working form", async ({ page }) => {

@@ -2,6 +2,7 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { assertSupabaseEnvironment } from "./lib/supabase-environment";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -46,6 +47,26 @@ function isH3SwallowedErrorBody(body: string): boolean {
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    // A deployment can supply different server bindings from those used at build time.
+    // Reject that target before rendering a page or accepting any write.
+    try {
+      const bindings = (env && typeof env === "object" ? env : {}) as Record<string, string>;
+      assertSupabaseEnvironment({
+        VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
+        VITE_SUPABASE_PUBLISHABLE_KEY: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        VITE_SUPABASE_PROJECT_ID: import.meta.env.VITE_SUPABASE_PROJECT_ID,
+        SUPABASE_URL: bindings.SUPABASE_URL ?? process.env.SUPABASE_URL,
+        SUPABASE_PUBLISHABLE_KEY:
+          bindings.SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_PUBLISHABLE_KEY,
+        SUPABASE_PROJECT_ID: bindings.SUPABASE_PROJECT_ID ?? process.env.SUPABASE_PROJECT_ID,
+      });
+    } catch (error) {
+      console.error(error);
+      return new Response("Supabase configuration is unavailable or inconsistent.", {
+        status: 503,
+        headers: { "content-type": "text/plain; charset=utf-8" },
+      });
+    }
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);

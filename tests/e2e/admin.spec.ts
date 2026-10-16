@@ -15,7 +15,9 @@ test.describe("admin access", () => {
     const calls = await mockSupabase(page, { user: "plain" });
     await signIn(page);
     await page.goto("/admin");
-    await expect(page.getByRole("heading", { name: /mentor access required/i })).toBeVisible({
+    await expect(
+      page.getByRole("heading", { name: /counsellor or therapist access required/i }),
+    ).toBeVisible({
       timeout: 180_000,
     });
     expect(calls.filter((c) => ADMIN_DATA.test(c.fn))).toHaveLength(0);
@@ -30,7 +32,9 @@ test.describe("admin dashboard", () => {
   test("overview, server-side filters, sort and numbered pagination", async ({ page }) => {
     const calls = await mockSupabase(page, { user: "admin" });
     await page.goto("/admin");
-    await expect(page.getByRole("heading", { name: "Mentor Dashboard" })).toBeVisible({
+    await expect(
+      page.getByRole("heading", { name: "Counsellor & Therapist Dashboard" }),
+    ).toBeVisible({
       timeout: 180_000,
     });
     for (const tile of [

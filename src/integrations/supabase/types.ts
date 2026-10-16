@@ -138,9 +138,10 @@ export type Database = {
       submissions: {
         Row: {
           admin_notes: string | null
+          age_group: string | null
           alias: string
           anon_user_id: string | null
-          category: string
+          category: string | null
           chat_enabled: boolean
           chat_ttl: string
           client_request_id: string | null
@@ -148,10 +149,10 @@ export type Database = {
           content: string
           created_at: string
           deleted_at: string | null
-          emotional_state: number
+          emotional_state: number | null
           highlight_on_instagram: string
           id: string
-          intent: string
+          intent: string | null
           is_archived: boolean
           is_featured: boolean
           nickname: string | null
@@ -163,9 +164,10 @@ export type Database = {
         }
         Insert: {
           admin_notes?: string | null
+          age_group?: string | null
           alias?: string
           anon_user_id?: string | null
-          category?: string
+          category?: string | null
           chat_enabled?: boolean
           chat_ttl?: string
           client_request_id?: string | null
@@ -173,10 +175,10 @@ export type Database = {
           content: string
           created_at?: string
           deleted_at?: string | null
-          emotional_state?: number
+          emotional_state?: number | null
           highlight_on_instagram?: string
           id?: string
-          intent?: string
+          intent?: string | null
           is_archived?: boolean
           is_featured?: boolean
           nickname?: string | null
@@ -187,9 +189,10 @@ export type Database = {
         }
         Update: {
           admin_notes?: string | null
+          age_group?: string | null
           alias?: string
           anon_user_id?: string | null
-          category?: string
+          category?: string | null
           chat_enabled?: boolean
           chat_ttl?: string
           client_request_id?: string | null
@@ -197,10 +200,10 @@ export type Database = {
           content?: string
           created_at?: string
           deleted_at?: string | null
-          emotional_state?: number
+          emotional_state?: number | null
           highlight_on_instagram?: string
           id?: string
-          intent?: string
+          intent?: string | null
           is_archived?: boolean
           is_featured?: boolean
           nickname?: string | null
@@ -208,6 +211,45 @@ export type Database = {
           reviewed_by?: string | null
           status?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      push_broadcast_audit: {
+        Row: {
+          id: string; admin_id: string; started_at: string; completed_at: string | null
+          total: number; successful: number; removed_invalid: number; failed_temporary: number
+        }
+        Insert: {
+          id?: string; admin_id: string; started_at?: string; completed_at?: string | null
+          total: number; successful?: number; removed_invalid?: number; failed_temporary?: number
+        }
+        Update: {
+          id?: string; admin_id?: string; started_at?: string; completed_at?: string | null
+          total?: number; successful?: number; removed_invalid?: number; failed_temporary?: number
+        }
+        Relationships: []
+      }
+      push_request_limits: {
+        Row: { bucket: string; window_start: string; hits: number }
+        Insert: { bucket: string; window_start: string; hits?: number }
+        Update: { bucket?: string; window_start?: string; hits?: number }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          id: string; endpoint: string; p256dh: string; auth: string
+          expiration_time: string | null; created_at: string; updated_at: string
+          last_success_at: string | null; last_failure_at: string | null
+        }
+        Insert: {
+          id?: string; endpoint: string; p256dh: string; auth: string
+          expiration_time?: string | null; created_at?: string; updated_at?: string
+          last_success_at?: string | null; last_failure_at?: string | null
+        }
+        Update: {
+          id?: string; endpoint?: string; p256dh?: string; auth?: string
+          expiration_time?: string | null; created_at?: string; updated_at?: string
+          last_success_at?: string | null; last_failure_at?: string | null
         }
         Relationships: []
       }
@@ -237,6 +279,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      end_chat_room: { Args: { _room_id: string; _token: string }; Returns: boolean }
+      push_check_rate_limit: { Args: { _bucket: string }; Returns: boolean }
       admin_dashboard_stats: { Args: never; Returns: Json }
       admin_send_chat_message: {
         Args: { _client_msg_id: string | null; _message: string; _room_id: string }
@@ -303,8 +347,9 @@ export type Database = {
           sender_type: string
         }[]
       }
-      submit_confession: {
+      submit_confession_v2: {
         Args: {
+          _age_group: string
           _anon_user_id: string
           _category: string
           _chat_enabled: boolean
@@ -315,6 +360,82 @@ export type Database = {
           _emotional_state: number
           _highlight_on_instagram: string
           _intent: string
+          _nickname: string
+        }
+        Returns: {
+          alias: string
+          room_expires_at: string | null
+          room_id: string | null
+          room_token: string | null
+          submission_id: string
+        }[]
+      }
+      submit_confession_v3: {
+        Args: {
+          _anon_user_id: string
+          _category: string
+          _chat_enabled: boolean
+          _chat_ttl: string
+          _client_request_id: string
+          _community_question: string
+          _consent_confirmed: boolean
+          _content: string
+          _emotional_state: number
+          _highlight_on_instagram: string
+          _intent: string
+          _nickname: string
+        }
+        Returns: {
+          alias: string
+          room_expires_at: string | null
+          room_id: string | null
+          room_token: string | null
+          submission_id: string
+        }[]
+      }
+      submit_confession_v4: {
+        Args: {
+          _anon_user_id: string
+          _client_request_id: string
+          _consent_confirmed: boolean
+          _content: string
+        }
+        Returns: {
+          alias: string
+          room_expires_at: string | null
+          room_id: string | null
+          room_token: string | null
+          submission_id: string
+        }[]
+      }
+      submit_confession_v5: {
+        Args: {
+          _anon_user_id: string
+          _client_request_id: string
+          _consent_confirmed: boolean
+          _content: string
+          _emotional_state: number | null
+          _intent: string | null
+        }
+        Returns: {
+          alias: string
+          room_expires_at: string | null
+          room_id: string | null
+          room_token: string | null
+          submission_id: string
+        }[]
+      }
+      submit_confession_v6: {
+        Args: {
+          _anon_user_id: string
+          _category: string | null
+          _chat_ttl: string
+          _client_request_id: string
+          _community_question: string
+          _consent_confirmed: boolean
+          _content: string
+          _emotional_state: number | null
+          _intent: string | null
           _nickname: string
         }
         Returns: {

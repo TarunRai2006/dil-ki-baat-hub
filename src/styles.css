@@ -255,16 +255,20 @@
   }
 }
 
-/* Crimson-rimmed release panel */
+/* Gold-rimmed story and chat panels */
 @utility release-glass {
   border-radius: 1.6rem;
   background: oklch(0.13 0.04 20 / 55%);
   backdrop-filter: blur(20px) saturate(140%);
-  border: 1px solid oklch(0.62 0.22 25 / 30%);
+  border: 1px solid oklch(0.766 0.126 87 / 48%);
   box-shadow:
     0 40px 110px -50px oklch(0 0 0 / 95%),
-    0 0 60px -26px oklch(0.62 0.22 25 / 45%),
+    0 0 60px -26px oklch(0.766 0.126 87 / 35%),
     inset 0 1px 0 oklch(1 0 0 / 6%);
+}
+
+html[data-room-pending="true"] #release [data-room-view="form"] {
+  visibility: hidden;
 }
 
 @utility text-crimson-glow {
@@ -351,7 +355,79 @@
     transform: translateX(0);
   }
   to {
+    transform: translateX(calc(-100% + 100vw));
+  }
+}
+
+@keyframes marquee-fade {
+  0%,
+  90% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.header-marquee {
+  animation: marquee-fade 10s linear forwards;
+}
+
+.header-marquee-track {
+  animation: marquee 10s linear forwards;
+  will-change: transform;
+}
+
+@keyframes marquee-loop {
+  to {
     transform: translateX(-50%);
+  }
+}
+
+.footer-confessions-track {
+  animation: marquee-loop 36s linear infinite;
+  animation-play-state: paused;
+  will-change: transform;
+}
+
+[data-started="true"] .footer-confessions-track {
+  animation-play-state: running;
+}
+
+.footer-confessions-window:hover .footer-confessions-track {
+  animation-play-state: paused;
+}
+
+@keyframes brand-heartbeat {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.86;
+  }
+  45% {
+    transform: scale(1.065);
+    opacity: 1;
+  }
+}
+
+.brand-loader {
+  animation: brand-heartbeat 2.4s ease-in-out infinite;
+  box-shadow: 0 0 20px -10px var(--gold);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .header-marquee-track,
+  .footer-confessions-track,
+  .brand-loader {
+    animation: none;
+    transform: none;
+  }
+  .header-marquee {
+    animation: none;
+    overflow-x: auto;
+  }
+  .footer-confessions-window {
+    overflow-x: auto;
   }
 }
 
@@ -615,13 +691,7 @@
   }
 }
 
-/* ----------------------------------------------------------- background film
- * Source: 1280x720 (16:9) whose first ~4.9s carry baked-in letterbox bars
- * (70px top and bottom, a 2.2:1 picture). As a loop those bars would flash on
- * every restart, so the frame is always sized to cover the viewport with the
- * 2.2:1 picture alone: the bars are never on screen, in any orientation.
- * Pure CSS, so rotation and resizing simply re-flow it.
- */
+/* The desktop film and portrait mobile version each cover their viewport. */
 .film-bg {
   position: fixed;
   inset: 0;
@@ -633,14 +703,8 @@
 }
 
 .film-frame {
-  --film-w: max(100vw, 100vh * 1280 / 580);
-  --film-w: max(100vw, 100lvh * 1280 / 580);
   position: absolute;
-  width: var(--film-w);
-  aspect-ratio: 16 / 9;
-  /* the eye sits a touch left of centre over the whole film */
-  left: calc(50vw - var(--film-w) * 0.48);
-  top: calc(50% - var(--film-w) * 9 / 32);
+  inset: 0;
 }
 
 .film-frame > img,
@@ -650,13 +714,14 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
   display: block;
 }
 
 /* the poster holds until the film has a real frame, then it cross-fades */
 .film-frame video {
   opacity: 0;
-  transition: opacity 900ms ease-out;
+  transition: opacity 600ms ease-out;
 }
 .film-frame[data-ready] video {
   opacity: 1;

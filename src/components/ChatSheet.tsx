@@ -20,7 +20,7 @@ export function ChatSheet({
       >
         <SheetTitle className="sr-only">Anonymous chat</SheetTitle>
         <SheetDescription className="sr-only">
-          A private, disappearing conversation with a Dil Ki Baat mentor.
+          A private, disappearing conversation with a Dil Ki Baat counsellor or therapist.
         </SheetDescription>
         {open && <ChatThread room={room} />}
       </SheetContent>
