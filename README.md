@@ -11,7 +11,7 @@ This repository contains the visitor site, admin dashboard, Supabase migrations,
 3. Submitting creates one private story and a token-protected chat. The completion dialog puts “Congratulations!!!!!” and “You let it go.” on separate lines. The counsellor note appears only for the advice choice.
 4. While a chat is active, it replaces the form. The browser stores the room token locally, so the visitor can reopen that chat after refreshing or returning in the **same browser profile and origin**. There is no account, recovery code, or access from another device. Ending the chat deletes its live messages and returns the form; the original story remains for moderation.
 
-The upper thought strip uses ten fixed sample lines and disappears after ten seconds. A thin, continuously moving Confessions ticker runs along the bottom of the footer with the site's original illustrative “Someone in…” lines. These are labelled examples, not visitor submissions. New private stories never appear there.
+The upper thought strip uses ten fixed sample lines and disappears after ten seconds. A thin, continuously moving ticker runs along the bottom of the footer with the site's original illustrative “Someone in…” lines. These are sample lines, not visitor submissions. New private stories never appear there.
 
 New stories are **private by default**. The current form has no public sharing choice. Historical stories may still be eligible for public excerpts if they had the earlier consent and were approved and featured. The Terms of Service state a minimum age of 16 and require parent or guardian permission for visitors aged 16–17; the application does not verify that permission. Review those safeguards before a public launch.
 
@@ -45,7 +45,7 @@ The frontend uses React, TypeScript, TanStack Start/Router, Vite, Tailwind CSS, 
 
 ## Run locally
 
-You need Node.js 20 or newer, npm, Docker Desktop, and the Supabase CLI (available through `npx`). The page can render without a backend, but story submission, chat, admin, and push need a reachable Supabase project.
+You need Node.js 20 or newer, npm, Docker Desktop, and the Supabase CLI (available through `npx`). A complete local Supabase environment is required before Vite starts; story submission, chat, admin, and push also need a reachable Supabase project.
 
 ```sh
 npm install
@@ -73,6 +73,7 @@ To create a **local-only** admin account, set `SUPABASE_SECRET_KEY`, `ADMIN_EMAI
 | ---------------------------------------------------- | ------------------------ | ------------------------------------------------------ |
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` | Browser/build            | Public Supabase API connection.                        |
 | `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`           | Server                   | Public Supabase connection for server routes.          |
+| `VITE_SUPABASE_PROJECT_ID`, `SUPABASE_PROJECT_ID`   | Browser/build and server | Required for hosted targets; both must match the URL ref. |
 | `VITE_VAPID_PUBLIC_KEY`, `VAPID_PUBLIC_KEY`          | Browser/build and server | Matching public Web Push key.                          |
 | `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`                 | Server secret            | Signs browser push messages.                           |
 | `SUPABASE_SERVICE_ROLE_KEY`                          | Server secret            | Saves subscriptions and broadcast audit; bypasses RLS. |
@@ -133,10 +134,12 @@ npm run test:e2e
 
 ## Deploying safely
 
-1. Choose the intended Supabase project and verify its ref in `supabase/config.toml` and your local environment before linking or pushing migrations. Apply migrations in order with `npx supabase db push`. Do not load `supabase/seed.sql` into production.
+1. Choose the intended Supabase project, set that host's URL, publishable key, and project ID variables, then link the CLI explicitly with `npx supabase link --project-ref <project-ref>`. Verify with `npx supabase migration list --linked` before `npx supabase db push`. The committed `supabase/config.toml` has a neutral local workspace name; it never selects a hosted target. Do not load `supabase/seed.sql` into production.
 2. Configure the public Supabase values and VAPID public key for the build. Configure the service-role key, VAPID private key, subject, and rate-limit secret **only** in the server runtime.
 3. Create approved professional accounts and grant `admin` through the owner-controlled Supabase process. Disable public account sign-up if it is not needed.
 4. Review the 16–17 guardian-permission process, retention policy, crisis copy, Terms, and any regional legal requirements before opening the site publicly. The current form does not verify age or guardian permission.
 5. Test a real submission, return to chat in the same browser, End chat, admin moderation, and a browser push notification on the deployed HTTPS origin.
+
+`npm run dev` and `npm run build` fail immediately if the required Supabase values are missing, placeholders, or inconsistent. Hosted project IDs must match the standard Supabase URL ref. The server also rejects requests if runtime bindings differ from the browser target built into the site. CI and preview builds need their own explicit values; they do not inherit a project from Git. The live smoke flow (submission → stored row → chat → admin reply → moderation) is in `tests/e2e/live.spec.ts` and must run only against a local Supabase stack.
 
 This project was built with [Lovable](https://lovable.dev). Pushing a commit to a connected branch can sync it back into Lovable; preserve published Git history.

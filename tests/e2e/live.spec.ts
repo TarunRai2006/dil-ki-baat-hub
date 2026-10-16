@@ -89,13 +89,14 @@ test.describe("@live full stack", () => {
     await visitor.getByRole("button", { name: "I want advice" }).click();
     await visitor.getByRole("button", { name: "Disappear in 1 hour" }).click();
     await visitor.getByRole("button", { name: /let it go/i }).dblclick();
-    await visitor.getByRole("button", { name: "Open my chat" }).click();
-    await expect(visitor.getByRole("heading", { name: /your chat is here/i })).toBeVisible();
+    const openChat = visitor.getByRole("button", { name: "Open my chat" });
+    await expect(openChat).toBeVisible({ timeout: 45_000 });
 
-    const { data } = await service
+    const { data, error } = await service
       .from("submissions")
       .select("*")
       .like("content", `Live ${stamp}%`);
+    expect(error).toBeNull();
     expect(data).toHaveLength(1);
     expect(data![0]).toMatchObject({
       category: "Career",
@@ -110,6 +111,8 @@ test.describe("@live full stack", () => {
     });
     subId = data![0].id;
     visitorAlias = data![0].alias;
+    await openChat.click();
+    await expect(visitor.getByRole("heading", { name: /your chat is here/i })).toBeVisible();
     stored = await visitor.evaluate(
       () => JSON.parse(localStorage.getItem("dkb_chat_rooms") || "[]")[0],
     );

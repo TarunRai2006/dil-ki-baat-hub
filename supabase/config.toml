@@ -1,1 +1,3 @@
-project_id = "iytqunvpnubbttppoepe"
+# Local CLI workspace name only. Hosted targets are selected with
+# `supabase link --project-ref ...` and per-host environment variables.
+project_id = "dil-ki-baat-local"

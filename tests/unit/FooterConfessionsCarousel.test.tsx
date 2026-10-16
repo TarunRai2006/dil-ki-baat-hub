@@ -6,7 +6,7 @@ it("keeps the original example confessions in a thin footer ticker", () => {
   vi.useFakeTimers();
   const { container } = render(<FooterConfessionsCarousel />);
 
-  expect(screen.getByText("Confessions · examples")).toBeInTheDocument();
+  expect(screen.queryByText("Confessions · examples")).not.toBeInTheDocument();
   expect(screen.getByText(/not visitor submissions/i)).toBeInTheDocument();
   expect(container.querySelector('[data-confessions-source="examples"]')).not.toBeNull();
   expect(container.querySelectorAll(".footer-confessions-track span")).toHaveLength(12);

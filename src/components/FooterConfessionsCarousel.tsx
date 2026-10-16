@@ -37,9 +37,6 @@ export function FooterConfessionsCarousel() {
       data-started={started}
       className="flex min-w-0 items-center overflow-hidden border-t border-primary/25 bg-background pb-[env(safe-area-inset-bottom)]"
     >
-      <span className="relative z-10 shrink-0 border-r border-primary/25 bg-background px-3 py-2.5 font-mono text-[0.55rem] font-semibold uppercase tracking-[0.16em] text-primary sm:px-5 sm:text-[0.6rem]">
-        Confessions · examples
-      </span>
       <span className="sr-only">Illustrative examples, not visitor submissions.</span>
 
       <div className="footer-confessions-window min-w-0 flex-1 overflow-hidden">

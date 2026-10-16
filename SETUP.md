@@ -7,9 +7,11 @@ those migrations applied works.
 
 The app needs a reachable Supabase project. `npm run dev` uses the URL and
 publishable key from your local environment file; starting Vite alone does not
-start the database. See `.env.example` for the required variables. The project
-ID in `supabase/config.toml` identifies a project, but does not supply a
-working URL or key to the browser.
+start the database. See `.env.example` for the required variables. The committed
+`supabase/config.toml` contains only a local CLI workspace name. It does not
+select a hosted project. Vite refuses to start or build unless the browser and
+server URL/key pairs are present and agree; for hosted projects, both project
+IDs must also match the URL's project ref.
 
 There are two ways to run it:
 
@@ -71,26 +73,25 @@ Restart the dev server after changing any env file. Never create a plain
 
 1. Create a project at https://supabase.com/dashboard (the free tier is fine).
    Note its **project ref**, the `xxxx` in `https://xxxx.supabase.co`.
-2. Apply the schema from this repository (already done for `iytqunvpnubbttppoepe`;
-   run `db push` again whenever a new migration is added):
+2. Apply the schema from this repository to the project you intend to use.
+   The CLI link is stored in ignored `supabase/.temp/`, per checkout; verify it
+   before every migration push:
 
    ```sh
    npx supabase login
    npx supabase link --project-ref <project-ref>
+   npx supabase migration list --linked
    npx supabase db push
    ```
 
    Do not run `supabase/seed.sql` here; it is sample data for local use only.
    `npx supabase migration list --linked` shows local and remote side by side.
 
-   If `db push` says **"IPv6 is not supported on your current network"** and
-   names a different project: the CLI takes the project from
-   `SUPABASE_PROJECT_ID` in `.env` and `project_id` in `supabase/config.toml`
-   before the link. Make both the new ref; `link` then connects through the
-   IPv4 pooler.
+   If the CLI names a different project, stop and relink to the intended ref.
+   Never change the committed local `project_id` to a hosted project ref.
 
-3. **Project Settings → API**: copy the Project URL and the publishable (anon)
-   key into `.env`, replacing the old values:
+3. **Project Settings → API**: copy the Project URL, its project ref, and the
+   publishable (anon) key into the per-host `.env` or deployment variables:
    ```sh
    VITE_SUPABASE_URL="https://<project-ref>.supabase.co"
    VITE_SUPABASE_PUBLISHABLE_KEY="<publishable key>"
@@ -99,9 +100,14 @@ Restart the dev server after changing any env file. Never create a plain
    VITE_SUPABASE_PROJECT_ID="<project-ref>"
    SUPABASE_PROJECT_ID="<project-ref>"
    ```
-   These keys are public by design: every permission is enforced in the
-   database. **Never** put the secret / service_role key in `.env` or anywhere
-   in the frontend. Set the same variables in your hosting provider.
+   The URL/key pairs must be identical across browser and server, and both IDs
+   must equal the ref in the standard `https://<project-ref>.supabase.co` URL.
+   Missing or mismatched values fail the dev server and production build; a
+   deployed server rejects requests if its runtime bindings diverge from the
+   browser values baked into the build. Set these values independently in each
+   hosting environment, including preview and CI. The publishable key is public
+   by design: database permissions are enforced with RLS. **Never** put the
+   secret / service_role key in `.env` or anywhere in the frontend.
 4. Create your counsellor or therapist login: **Authentication → Users → Add user** (email +
    password, tick _Auto Confirm User_), copy the new user's UID, then in the
    **SQL Editor** run:
